@@ -1,5 +1,6 @@
+import time
 from typing import List, Tuple
-from numpy import roll
+import numpy as np
 
 
 class TabuSearchTSP:
@@ -16,7 +17,7 @@ class TabuSearchTSP:
     @staticmethod
     def read_input(filename: str) -> Tuple[List[List[int]], int]:
         cities = list()
-        print(cities)
+        # print(cities)
         with open(filename, 'r') as file:
             first_line = file.readline()
             print([str(x) for x in first_line.split()])
@@ -27,7 +28,7 @@ class TabuSearchTSP:
             if cities_count != len(cities):
                 print(f'Number of read cities is different from declared.')
                 exit(1)
-        print(cities)
+        # print(cities)
         return cities, time
 
     class TSPPath:
@@ -51,30 +52,61 @@ class TabuSearchTSP:
         def __eq__(self, other: 'TabuSearchTSP.TSPPath'):
             return self.move_sequence == other.move_sequence
 
+        def __hash__(self):
+            return hash(str(self.move_sequence))
+
     def compute_path_cost(self, path: TSPPath):
         if len(path.move_sequence) == 1:
             return self.cities[path.move_sequence[0]][path.move_sequence[0]]
-        print([self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1))])
-        cost = sum(self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1)))
+        # print([self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1))])
+        cost = sum(self.cities[i][k] for k, i in zip(path.move_sequence, np.roll(path.move_sequence, 1)))
         return cost
 
     def generate_neighbours(self, path: TSPPath, neighbours_max_count=1e6) -> List[TSPPath]:
         neighbours: List[TabuSearchTSP.TSPPath] = []
         for i in range(self.cities_count):
             for j in range(self.cities_count):
-                if j > i:
+                if j > i > 0:
                     neighbours.append(path.swap_cities(i, j))
         return neighbours
 
     def print_cities_matrix(self):
         return '\n'.join([f'{row}' for row in self.cities])
 
-    def tabu_search(self):
-        tabu = []
+    def tabu_search_basic(self, initial_solution: TSPPath, tabu_round_memory=1, max_iterations=100_000):
+        tabu = {}
+        x = initial_solution
+        for i in range(max_iterations):
+            neighbourhood = self.generate_neighbours(x, neighbours_max_count=1e6)
+            x_cost = self.compute_path_cost(x)
+            if i % 50 == 0:
+                print(f'Iteration {i}\nx = {x}\ncost = {x_cost}')
+                print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
+            best_neighbour = None
+            best_neighbour_cost = x_cost
+            for neighbour in (n for n in neighbourhood if n not in tabu.keys()):
+                neighbour_cost = self.compute_path_cost(neighbour)
+                tabu[neighbour] = (i, neighbour_cost)  # this cost is unnecessary for now
+                if neighbour_cost < best_neighbour_cost:
+                    best_neighbour = neighbour
+            if best_neighbour:
+                x = best_neighbour
+                # clean old tabu data
+                tabu = {k: (j, val) for k, (j, val) in tabu.items() if i - tabu_round_memory < j}
+            else:
+                return x, self.compute_path_cost(x), i
 
 
 if __name__ == '__main__':
-    ts = TabuSearchTSP.from_file('l1z2a.txt')
-    print(ts.print_cities_matrix())
-    print(ts.compute_path_cost(TabuSearchTSP.TSPPath([0, 1, 2, 3, 4])))
-    print([str(x) for x in ts.generate_neighbours(TabuSearchTSP.TSPPath([1, 2, 3, 4, 5]))])
+    ts = TabuSearchTSP.from_file('l1z2b.txt')
+    # print(ts.print_cities_matrix())
+    # print(ts.compute_path_cost(TabuSearchTSP.TSPPath([0, 3, 2, 1, 4])))
+    # print([str(x) for x in ts.generate_neighbours(TabuSearchTSP.TSPPath([1, 2, 3, 4, 5]))])
+    random_permutation = [0] + list(np.random.permutation(range(1, ts.cities_count)))
+    print(random_permutation)
+    t = time.time()
+    path, cost, iterations = ts.tabu_search_basic(TabuSearchTSP.TSPPath(random_permutation))
+    print(f'Time: {time.time() - t}')
+    print(f'Initial solution: {random_permutation} Iterations: {iterations}')
+    print(path)
+    print(cost)
