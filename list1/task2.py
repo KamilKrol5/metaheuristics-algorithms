@@ -1,4 +1,5 @@
 from typing import List, Tuple
+from numpy import roll
 
 
 class TabuSearchTSP:
@@ -50,6 +51,13 @@ class TabuSearchTSP:
         def __eq__(self, other: 'TabuSearchTSP.TSPPath'):
             return self.move_sequence == other.move_sequence
 
+    def compute_path_cost(self, path: TSPPath):
+        if len(path.move_sequence) == 1:
+            return self.cities[path.move_sequence[0]][path.move_sequence[0]]
+        print([self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1))])
+        cost = sum(self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1)))
+        return cost
+
     def generate_neighbours(self, path: TSPPath, neighbours_max_count=1e6) -> List[TSPPath]:
         neighbours: List[TabuSearchTSP.TSPPath] = []
         for i in range(self.cities_count):
@@ -58,11 +66,15 @@ class TabuSearchTSP:
                     neighbours.append(path.swap_cities(i, j))
         return neighbours
 
+    def print_cities_matrix(self):
+        return '\n'.join([f'{row}' for row in self.cities])
+
     def tabu_search(self):
         tabu = []
 
 
 if __name__ == '__main__':
     ts = TabuSearchTSP.from_file('l1z2a.txt')
-
+    print(ts.print_cities_matrix())
+    print(ts.compute_path_cost(TabuSearchTSP.TSPPath([0, 1, 2, 3, 4])))
     print([str(x) for x in ts.generate_neighbours(TabuSearchTSP.TSPPath([1, 2, 3, 4, 5]))])
