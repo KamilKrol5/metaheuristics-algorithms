@@ -86,20 +86,20 @@ class TabuSearchTSP:
         return '\n'.join([f'{row}' for row in self.cities])
 
     def tabu_search_basic(self, initial_solution=None,
-                          tabu_round_memory=150, max_iterations=500, worsen_factor=1.0):
+                          tabu_round_memory=450, max_iterations=500, worsen_factor=1.0):
         if not initial_solution:
             initial_solution = TabuSearchTSP.TSPPath(tuple(range(self.cities_count)))
 
         tabu = {}
-        x = initial_solution
-        the_best_of_the_best = (initial_solution, self.compute_path_cost(x))
+        current_solution = initial_solution
+        currently_best_known_solution = (initial_solution, self.compute_path_cost(current_solution))
 
         for i in range(max_iterations):
-            neighbourhood = self.generate_neighbours(x, neighbours_max_count=1_000_000_000)
-            x_cost = self.compute_path_cost(x)
+            neighbourhood = self.generate_neighbours(current_solution, neighbours_max_count=1_000_000_000)
+            x_cost = self.compute_path_cost(current_solution)
 
             if i % 25 == 0:
-                print(f'Iteration {i}\nx = {x}\ncost = {x_cost}\ntabu size = {sum(len(b) for b in tabu.values())}')
+                print(f'Iteration {i}\nx = {current_solution}\ncost = {x_cost}\ntabu size = {sum(len(b) for b in tabu.values())}')
                 # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
 
             best_neighbour = None
@@ -112,16 +112,21 @@ class TabuSearchTSP:
                     best_neighbour = neighbour
                     best_neighbour_cost = neighbour_cost
 
-            the_best_of_the_best = (x, x_cost) if x_cost < the_best_of_the_best[1] else the_best_of_the_best
+            currently_best_known_solution = (current_solution, x_cost) if x_cost < currently_best_known_solution[1] else currently_best_known_solution
             if best_neighbour:
-                x = best_neighbour
-                tabu[best_neighbour] = (i, best_neighbour_cost)  # this cost is unnecessary for now
-                # clean old tabu data
-                tabu = {k: (j, val) for k, (j, val) in tabu.items() if i - tabu_round_memory < j}
-            else:
-                return the_best_of_the_best[0], the_best_of_the_best[1], max_iterations
+                current_solution = best_neighbour
+                tabu[best_neighbour] = (i, best_neighbour_cost)
 
-        return the_best_of_the_best[0], the_best_of_the_best[1], max_iterations
+                # clean old tabu data
+                usability_threshold = pow(worsen_factor, 3) * best_neighbour_cost
+                tabu = {k: (j, val)
+                        for k, (j, val) in tabu.items()
+                        if i - tabu_round_memory < j and val < usability_threshold}
+
+            else:
+                return currently_best_known_solution[0], currently_best_known_solution[1], max_iterations
+
+        return currently_best_known_solution[0], currently_best_known_solution[1], max_iterations
 
 
 if __name__ == '__main__':
