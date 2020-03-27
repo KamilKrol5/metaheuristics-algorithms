@@ -85,21 +85,34 @@ class TabuSearchTSP:
     def print_cities_matrix(self):
         return '\n'.join([f'{row}' for row in self.cities])
 
+    def generate_random_initial_solution(self):
+        best = None
+        best_cost = np.inf
+        for _ in range(self.cities_count//10):
+            random_sequence = tuple([0] + list(np.random.permutation(range(1, self.cities_count))))
+            solution = TabuSearchTSP.TSPPath(random_sequence)
+            solution_cost = self.compute_path_cost(solution)
+            if best_cost > solution_cost:
+                best = solution
+                best_cost = solution_cost
+        return best, best_cost
+
     def tabu_search_basic(self, initial_solution=None,
-                          tabu_round_memory=450, max_iterations=500, worsen_factor=1.0):
+                          tabu_round_memory=150, max_iterations=500, worsen_factor=1.0):
         if not initial_solution:
-            initial_solution = TabuSearchTSP.TSPPath(tuple(range(self.cities_count)))
+            initial_solution, _ = self.generate_random_initial_solution()
 
         tabu = {}
         current_solution = initial_solution
         currently_best_known_solution = (initial_solution, self.compute_path_cost(current_solution))
 
         for i in range(max_iterations):
-            neighbourhood = self.generate_neighbours(current_solution, neighbours_max_count=1_000_000_000)
+            neighbourhood = self.generate_neighbours(current_solution)
             x_cost = self.compute_path_cost(current_solution)
 
             if i % 25 == 0:
-                print(f'Iteration {i}\nx = {current_solution}\ncost = {x_cost}\ntabu size = {sum(len(b) for b in tabu.values())}')
+                print(f'Iteration {i}\nx = {current_solution}\ncost = {x_cost}')
+                print(f'tabu size = {len(tabu.values())}')
                 # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
 
             best_neighbour = None
@@ -107,12 +120,15 @@ class TabuSearchTSP:
 
             for neighbour in (n for n in neighbourhood if n not in tabu.keys()):
                 neighbour_cost = self.compute_path_cost(neighbour)
-                # tabu[neighbour] = (i, neighbour_cost)  # this cost is unnecessary for now
+                # tabu[neighbour] = (i, neighbour_cost)
                 if neighbour_cost < best_neighbour_cost:
                     best_neighbour = neighbour
                     best_neighbour_cost = neighbour_cost
 
-            currently_best_known_solution = (current_solution, x_cost) if x_cost < currently_best_known_solution[1] else currently_best_known_solution
+            currently_best_known_solution = \
+                (current_solution, x_cost) if x_cost < currently_best_known_solution[1] \
+                else currently_best_known_solution
+
             if best_neighbour:
                 current_solution = best_neighbour
                 tabu[best_neighbour] = (i, best_neighbour_cost)
@@ -137,7 +153,8 @@ if __name__ == '__main__':
     random_permutation = tuple([0] + list(np.random.permutation(range(1, ts.cities_count))))
     print(random_permutation)
     t = time.time()
-    path, cost, iterations = ts.tabu_search_basic(TabuSearchTSP.TSPPath(random_permutation), worsen_factor=1.1)
+    # path, cost, iterations = ts.tabu_search_basic(TabuSearchTSP.TSPPath(random_permutation), worsen_factor=1.15)
+    path, cost, iterations = ts.tabu_search_basic(worsen_factor=1.1)
     print(f'Time: {time.time() - t}')
     print(f'Initial solution: {random_permutation} Iterations: {iterations}')
     print(path)
