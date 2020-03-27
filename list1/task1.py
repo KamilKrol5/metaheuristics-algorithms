@@ -21,12 +21,14 @@ def generate_random_vector(dimension, low=-INITIAL_RANGE, high=INITIAL_RANGE):
 """
 
 
-def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction, max_iterations=100000, max_fails = 1):
+def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction, max_iterations=100000,
+                 max_fails=1):
     x = initial_solution
     fails = 0
     for i in range(max_iterations):
         if cond_of_satisfaction and cond_of_satisfaction(x):
             return x
+
         print(f'Iteration: {i}, x = {x}', file=sys.stderr)
         function_val = function(x)
         neighbourhood = neighbour_function(x)
@@ -38,6 +40,7 @@ def local_search(function, neighbour_function, initial_solution, cond_of_satisfa
             if function_val > function_val_for_neighbour:
                 x = neighbour
                 break
+
         # in case all neighbours has been checked and none of them is better solution the work is
         # considered to be done
         else:
@@ -56,35 +59,60 @@ def happy_cat(x):
     return ((x_norm - n) ** 2) ** alpha + 1 / 4 * (0.5 * x_norm ** 2 + sum((x_i for x_i in x))) + 1 / 2
 
 
+def get_new_random_neighbour_happy_cat(x_i):
+    return x_i + np.random.uniform(-1, 1) * pow(abs(x_i), 0.3)
+
+
 def neighbours_for_cat_random(s, number_of_neighbours=1):
-    return [[-x_i for x_i in s], [np.sign(x_i) * x_i**2 for x_i in s], [2 * x_i for x_i in s]] +\
-        [[x_i + np.random.uniform(-1, 1) * pow(abs(x_i), 0.3) for x_i in s] for _ in range(number_of_neighbours-3)]
+    return [
+               [-x_i for x_i in s],
+               [np.sign(x_i) * x_i ** 2 for x_i in s],
+               [2 * x_i for x_i in s]
+           ] + [
+               [get_new_random_neighbour_happy_cat(x_i) for x_i in s]
+               for _ in range(number_of_neighbours - 3)
+           ]
 
 
 def griewank(x):
-    return 1 + 1/4000 * sum((x_i**2 for x_i in x)) - np.product([np.cos(x_i/np.sqrt(i)) for i, x_i in enumerate(x, 1)])
+    return 1 + 1 / 4000 * sum((x_i ** 2 for x_i in x)) - np.product(
+        [np.cos(x_i / np.sqrt(i)) for i, x_i in enumerate(x, 1)])
+
+
+def get_new_random_neighbour_griewank(x_i) -> int:
+    return x_i + np.random.uniform(-1, 1) * abs(x_i)
 
 
 def neighbours_for_griewank(s, number_of_neighbours=1):
-    return [[x_i + np.random.uniform(-1, 1) * abs(x_i) for x_i in s] for _ in range(number_of_neighbours)]
+    return [
+        [get_new_random_neighbour_griewank(x_i) for x_i in s]
+        for _ in range(number_of_neighbours)
+    ]
 
 
 if __name__ == '__main__':
     f = happy_cat
     X = generate_random_vector(4, -2560, 2560)
-    res = local_search(f, lambda t: neighbours_for_cat_random(t, 1000), X, None, max_fails=1)
+    res = local_search(f,
+                       lambda t: neighbours_for_cat_random(t, 1000),
+                       X,
+                       None,
+                       max_fails=1)
     print('Happy cat')
     print(f'Solution: {res}')
     print(f'Value: {f(res)}')
     print(f'Relative error of solution: '
-          f'{abs(np.linalg.norm(res) - np.linalg.norm([-1, -1, -1, -1]))/np.linalg.norm([-1, -1, -1, -1])}')
+          f'{abs(np.linalg.norm(res) - np.linalg.norm([-1, -1, -1, -1])) / np.linalg.norm([-1, -1, -1, -1])}')
 
     # print(griewank([11.013]))  # = 1.0128967117029901
     # print(griewank([0]))  # = 0 - global minimum
 
     g = griewank
     X = generate_random_vector(4, -2560, 2560)
-    res = local_search(g, lambda t: neighbours_for_griewank(t, 1000), X, None)
+    res = local_search(g,
+                       lambda t: neighbours_for_griewank(t, 1000),
+                       X,
+                       None)
     print('Griewank')
     print(f'Solution: {res}')
     print(f'Value: {g(res)}')
