@@ -85,32 +85,43 @@ class TabuSearchTSP:
     def print_cities_matrix(self):
         return '\n'.join([f'{row}' for row in self.cities])
 
-    def tabu_search_basic(self, initial_solution: TSPPath,
-                          tabu_round_memory=100, max_iterations=500, worsen_factor=1.0):
+    def tabu_search_basic(self, initial_solution=None,
+                          tabu_round_memory=150, max_iterations=500, worsen_factor=1.0):
+        if not initial_solution:
+            initial_solution = TabuSearchTSP.TSPPath(tuple(range(self.cities_count)))
+
         tabu = {}
         x = initial_solution
+        the_best_of_the_best = (initial_solution, self.compute_path_cost(x))
+
         for i in range(max_iterations):
             neighbourhood = self.generate_neighbours(x, neighbours_max_count=1_000_000_000)
             x_cost = self.compute_path_cost(x)
-            if i % 50 == 0:
-                print(f'Iteration {i}\nx = {x}\ncost = {x_cost}')
+
+            if i % 25 == 0:
+                print(f'Iteration {i}\nx = {x}\ncost = {x_cost}\ntabu size = {sum(len(b) for b in tabu.values())}')
                 # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
+
             best_neighbour = None
             best_neighbour_cost = x_cost * worsen_factor
+
             for neighbour in (n for n in neighbourhood if n not in tabu.keys()):
                 neighbour_cost = self.compute_path_cost(neighbour)
                 # tabu[neighbour] = (i, neighbour_cost)  # this cost is unnecessary for now
                 if neighbour_cost < best_neighbour_cost:
                     best_neighbour = neighbour
                     best_neighbour_cost = neighbour_cost
+
+            the_best_of_the_best = (x, x_cost) if x_cost < the_best_of_the_best[1] else the_best_of_the_best
             if best_neighbour:
                 x = best_neighbour
                 tabu[best_neighbour] = (i, best_neighbour_cost)  # this cost is unnecessary for now
                 # clean old tabu data
                 tabu = {k: (j, val) for k, (j, val) in tabu.items() if i - tabu_round_memory < j}
             else:
-                return x, self.compute_path_cost(x), i
-        return x, self.compute_path_cost(x), max_iterations
+                return the_best_of_the_best[0], the_best_of_the_best[1], max_iterations
+
+        return the_best_of_the_best[0], the_best_of_the_best[1], max_iterations
 
 
 if __name__ == '__main__':
