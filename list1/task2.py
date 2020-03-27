@@ -64,8 +64,11 @@ class TabuSearchTSP:
         if len(path.move_sequence) == 1:
             return self.cities[path.move_sequence[0]][path.move_sequence[0]]
         # print([self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1))])
-        cost = sum(self.cities[i][k] for k, i in zip(path.move_sequence, np.roll(path.move_sequence, 1)))
-        return cost
+        total_cost = sum(
+            self.cities[path.move_sequence[i]][path.move_sequence[i+1]] for i
+            in range(len(path.move_sequence) - 1))
+        total_cost += self.cities[path.move_sequence[-1]][path.move_sequence[0]]
+        return total_cost
 
     def generate_neighbours(self, path: TSPPath, neighbours_max_count=None) -> List[TSPPath]:
         neighbours: List[TabuSearchTSP.TSPPath] = []
