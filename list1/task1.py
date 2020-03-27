@@ -60,7 +60,7 @@ def happy_cat(x):
 
 
 def get_new_random_neighbour_happy_cat(x_i):
-    return x_i + np.random.uniform(-1, 1) * pow(abs(x_i), 0.3)
+    return x_i + np.random.uniform(-1, 1) * pow(abs(x_i), 0.2)
 
 
 def neighbours_for_cat_random(s, number_of_neighbours=1):
@@ -92,7 +92,7 @@ def neighbours_for_griewank(s, number_of_neighbours=1):
 
 if __name__ == '__main__':
     f = happy_cat
-    X = generate_random_vector(4, -2560, 2560)
+    X = generate_random_vector(4, -2, 2)
     res = local_search(f,
                        lambda t: neighbours_for_cat_random(t, 1000),
                        X,
