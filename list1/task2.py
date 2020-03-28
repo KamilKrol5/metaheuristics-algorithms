@@ -9,6 +9,26 @@ def swap_tuple(tup, i, j):
     return tuple(tmp)
 
 
+class TSPPath:
+    def __init__(self, move_sequence: Tuple[int]):
+        self.move_sequence = move_sequence
+
+    def __str__(self):
+        return f'<TSPPath: {self.move_sequence}>'
+
+    """Returns a new TSPPath object with swapped cities"""
+
+    def swap_cities(self, city1, city2) -> 'TSPPath':
+        new_move_sequence: Tuple[int] = swap_tuple(self.move_sequence, city1, city2)
+        return TSPPath(new_move_sequence)
+
+    def __eq__(self, other: 'TSPPath'):
+        return self.move_sequence == other.move_sequence
+
+    def __hash__(self):
+        return hash(self.move_sequence)
+
+
 class TabuSearchTSP:
     def __init__(self, cities: np.ndarray, max_time: int):
         self.cities = cities
@@ -27,38 +47,16 @@ class TabuSearchTSP:
             print([str(x) for x in first_line.split()])
             [max_time, cities_count] = [int(x) for x in first_line.split()]
             cities = np.ndarray((cities_count, cities_count))
-            # print(cities)
+
             for i, line in enumerate(file, 0):
                 for j, x in enumerate(line.split()):
                     cities[i][j] = int(x)
-                # cities[i] = np.ndarray(int(x) for x in line.split())
+
             if cities_count != len(cities):
                 print(f'Number of read cities is different from declared.')
                 exit(1)
-        # print(cities)
+
         return cities, max_time
-
-    class TSPPath:
-        def __init__(self, move_sequence: Tuple[int]):
-            self.move_sequence = move_sequence
-
-        def __copy__(self):
-            return TabuSearchTSP.TSPPath(self.move_sequence)
-
-        def __str__(self):
-            return f'<TSPPath: {self.move_sequence}>'
-
-        """Returns a new TSPPath object with swapped cities"""
-
-        def swap_cities(self, city1, city2) -> 'TabuSearchTSP.TSPPath':
-            new_move_sequence: Tuple[int] = swap_tuple(self.move_sequence, city1, city2)
-            return TabuSearchTSP.TSPPath(new_move_sequence)
-
-        def __eq__(self, other: 'TabuSearchTSP.TSPPath'):
-            return self.move_sequence == other.move_sequence
-
-        def __hash__(self):
-            return hash(self.move_sequence)
 
     def compute_path_cost(self, path: TSPPath):
         if len(path.move_sequence) == 1:
@@ -71,7 +69,7 @@ class TabuSearchTSP:
         return total_cost
 
     def generate_neighbours(self, path: TSPPath, neighbours_max_count=None) -> List[TSPPath]:
-        neighbours: List[TabuSearchTSP.TSPPath] = []
+        neighbours: List[TSPPath] = []
         for i in range(self.cities_count):
             for j in range(self.cities_count):
                 if j > i > 0:
@@ -90,7 +88,7 @@ class TabuSearchTSP:
         best_cost = np.inf
         for _ in range(self.cities_count//10):
             random_sequence = tuple([0] + list(np.random.permutation(range(1, self.cities_count))))
-            solution = TabuSearchTSP.TSPPath(random_sequence)
+            solution = TSPPath(random_sequence)
             solution_cost = self.compute_path_cost(solution)
             if best_cost > solution_cost:
                 best = solution
@@ -148,12 +146,12 @@ class TabuSearchTSP:
 if __name__ == '__main__':
     ts = TabuSearchTSP.from_file('l1z2b.txt')
     # print(ts.print_cities_matrix())
-    # print(ts.compute_path_cost(TabuSearchTSP.TSPPath([0, 3, 2, 1, 4])))
-    # print([str(x) for x in ts.generate_neighbours(TabuSearchTSP.TSPPath([1, 2, 3, 4, 5]))])
+    # print(ts.compute_path_cost(TSPPath([0, 3, 2, 1, 4])))
+    # print([str(x) for x in ts.generate_neighbours(TSPPath([1, 2, 3, 4, 5]))])
     random_permutation = tuple([0] + list(np.random.permutation(range(1, ts.cities_count))))
     print(random_permutation)
     t = time.time()
-    # path, cost, iterations = ts.tabu_search_basic(TabuSearchTSP.TSPPath(random_permutation), worsen_factor=1.15)
+    # path, cost, iterations = ts.tabu_search_basic(TSPPath(random_permutation), worsen_factor=1.15)
     path, cost, iterations = ts.tabu_search_basic(worsen_factor=1.1)
     print(f'Time: {time.time() - t}')
     print(f'Initial solution: {random_permutation} Iterations: {iterations}')
