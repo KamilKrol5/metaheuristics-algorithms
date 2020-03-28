@@ -29,7 +29,7 @@ def local_search(function, neighbour_function, initial_solution, cond_of_satisfa
         if cond_of_satisfaction and cond_of_satisfaction(x):
             return x
 
-        print(f'Iteration: {i}, x = {x}', file=sys.stderr)
+        # print(f'Iteration: {i}, x = {x}', file=sys.stderr)
         function_val = function(x)
         neighbourhood = neighbour_function(x)
         # trying to find better solution among the neighbours
@@ -91,28 +91,21 @@ def neighbours_for_griewank(s, number_of_neighbours=1):
 
 
 if __name__ == '__main__':
-    f = happy_cat
-    X = generate_random_vector(4, -2, 2)
-    res = local_search(f,
-                       lambda t: neighbours_for_cat_random(t, 1000),
-                       X,
-                       None,
-                       max_fails=1)
-    print('Happy cat')
-    print(f'Solution: {res}')
-    print(f'Value: {f(res)}')
-    print(f'Relative error of solution: '
-          f'{abs(np.linalg.norm(res) - np.linalg.norm([-1, -1, -1, -1])) / np.linalg.norm([-1, -1, -1, -1])}')
-
-    # print(griewank([11.013]))  # = 1.0128967117029901
-    # print(griewank([0]))  # = 0 - global minimum
-
-    g = griewank
-    X = generate_random_vector(4, -2560, 2560)
-    res = local_search(g,
-                       lambda t: neighbours_for_griewank(t, 1000),
-                       X,
-                       None)
-    print('Griewank')
-    print(f'Solution: {res}')
-    print(f'Value: {g(res)}')
+    max_time = int(sys.argv[1])
+    if sys.argv[2] == 'h':
+        X = generate_random_vector(4, -2, 2)
+        res = local_search(happy_cat,
+                           lambda t: neighbours_for_cat_random(t, 1000),
+                           X,
+                           None,
+                           max_fails=1)
+        print(f'{res[0]} {res[1]} {res[2]} {res[3]} {happy_cat(res)}')
+    elif sys.argv[2] == 'g':
+        X = generate_random_vector(4, -2560, 2560)
+        res = local_search(griewank,
+                           lambda t: neighbours_for_griewank(t, 1000),
+                           X,
+                           None)
+        print(f'{res[0]} {res[1]} {res[2]} {res[3]} {griewank(res)}')
+    else:
+        print('Unknown function. Correct arguments are: <time> h/g.')
