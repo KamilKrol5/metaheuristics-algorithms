@@ -1,4 +1,5 @@
 import time
+from abc import ABC
 from typing import List, Tuple
 import numpy as np
 
@@ -13,9 +14,6 @@ class TSPPath:
     def __init__(self, move_sequence: Tuple[int]):
         self.move_sequence = move_sequence
 
-    def __str__(self):
-        return f'<TSPPath: {self.move_sequence}>'
-
     """Returns a new TSPPath object with swapped cities"""
 
     def swap_cities(self, city1, city2) -> 'TSPPath':
@@ -28,8 +26,46 @@ class TSPPath:
     def __hash__(self):
         return hash(self.move_sequence)
 
+    def __str__(self):
+        return f'<TSPPath: {self.move_sequence}>'
 
-class TabuSearchTSP:
+
+class TSPSolution:
+    def __init__(self, tsp_path: TSPPath, tsp_instance: 'TSPInstance'):
+        self.tsp_path = tsp_path
+        self.cost_table = tsp_instance.cities
+        self._cost = None
+
+    @classmethod
+    def with_cost(cls, tsp_path: TSPPath, tsp_instance: 'TSPInstance', given_cost: int) -> 'TSPSolution':
+        solution = TSPSolution(tsp_path, tsp_instance)
+        solution._cost = given_cost
+        return solution
+
+    @property
+    def cost(self):
+        if self._cost is not None:
+            return self._cost
+
+        total_cost = sum(
+            self.cost_table[self.tsp_path.move_sequence[i]][self.tsp_path.move_sequence[i + 1]] for i
+            in range(len(self.tsp_path.move_sequence) - 1))
+
+        total_cost += self.cost_table[self.tsp_path.move_sequence[-1]][self.tsp_path.move_sequence[0]]
+        self._cost = total_cost
+        return total_cost
+
+    def __hash__(self):
+        return self.tsp_path.__hash__()
+
+    def __eq__(self, other: 'TSPSolution'):
+        return self.tsp_path.move_sequence == other.tsp_path.move_sequence
+
+    def __str__(self):
+        return f'{self.tsp_path}, cost = {self.cost};'
+
+
+class TSPInstance(ABC):
     def __init__(self, cities: np.ndarray, max_time: int):
         self.cities = cities
         self.cities_count = len(cities)
@@ -37,7 +73,7 @@ class TabuSearchTSP:
 
     @classmethod
     def from_file(cls, filename: str):
-        cities, max_time = TabuSearchTSP.read_input(filename)
+        cities, max_time = TSPInstance.read_input(filename)
         return cls(cities, max_time)
 
     @staticmethod
@@ -58,89 +94,111 @@ class TabuSearchTSP:
 
         return cities, max_time
 
-    def compute_path_cost(self, path: TSPPath):
-        if len(path.move_sequence) == 1:
-            return self.cities[path.move_sequence[0]][path.move_sequence[0]]
-        # print([self.cities[i][k] for k, i in zip(path.move_sequence, roll(path.move_sequence, 1))])
-        total_cost = sum(
-            self.cities[path.move_sequence[i]][path.move_sequence[i+1]] for i
-            in range(len(path.move_sequence) - 1))
-        total_cost += self.cities[path.move_sequence[-1]][path.move_sequence[0]]
-        return total_cost
 
-    def generate_neighbours(self, path: TSPPath, neighbours_max_count=None) -> List[TSPPath]:
-        neighbours: List[TSPPath] = []
+class TabuSearchTSP(TSPInstance):
+    def generate_neighbours(self, solution: TSPSolution, neighbours_max_count=None) -> List[TSPSolution]:
+        neighbours: List[TSPSolution] = []
         for i in range(self.cities_count):
             for j in range(self.cities_count):
                 if j > i > 0:
-                    neighbours.append(path.swap_cities(i, j))
+                    neighbour_path = solution.tsp_path.swap_cities(i, j)
+                    neighbour_cost = self.compute_cost_from_existing_path(solution.tsp_path, solution.cost, (i, j))
+                    neighbours.append(TSPSolution.with_cost(neighbour_path, self, neighbour_cost))
         if neighbours_max_count:
             np.random.shuffle(neighbours)
             return neighbours[:neighbours_max_count]
         else:
             return neighbours
 
+    def get_cost(self, k, l):
+        return self.cities[k, l]
+
+    def compute_cost_from_existing_path(
+            self, base_path: TSPPath, base_path_cost: int, *inversions: Tuple[int, int]) -> int:
+        sequence = base_path.move_sequence
+        sequence_len = len(sequence)
+        for i, j in inversions:
+            if abs(i - j) == 1:
+                base_path_cost -= self.cities[sequence[i - 1]][sequence[i]] + \
+                    self.cities[sequence[i]][sequence[j]] + \
+                    self.cities[sequence[j]][sequence[(j + 1) % sequence_len]]
+                base_path_cost += self.cities[sequence[i - 1]][sequence[j]] + \
+                    self.cities[sequence[j]][sequence[i]] + \
+                    self.cities[sequence[i]][sequence[(j + 1) % sequence_len]]
+                return base_path_cost
+            base_path_cost -= self.cities[sequence[i - 1]][sequence[i]] + \
+                self.cities[sequence[i]][sequence[(i + 1) % sequence_len]] + \
+                self.cities[sequence[j - 1]][sequence[j]] + \
+                self.cities[sequence[j]][sequence[(j + 1) % sequence_len]]
+            base_path_cost += self.cities[sequence[i - 1]][sequence[j]] + \
+                self.cities[sequence[j]][sequence[(i + 1) % sequence_len]] + \
+                self.cities[sequence[j - 1]][sequence[i]] + \
+                self.cities[sequence[i]][sequence[(j + 1) % sequence_len]]
+            return base_path_cost
+
     def print_cities_matrix(self):
         return '\n'.join([f'{row}' for row in self.cities])
 
-    def generate_random_initial_solution(self):
+    def generate_random_initial_solution(self) -> TSPSolution:
         best = None
         best_cost = np.inf
-        for _ in range(self.cities_count//10):
+        for _ in range(max(3, self.cities_count // 2)):
             random_sequence = tuple([0] + list(np.random.permutation(range(1, self.cities_count))))
-            solution = TSPPath(random_sequence)
-            solution_cost = self.compute_path_cost(solution)
-            if best_cost > solution_cost:
+            solution = TSPSolution(TSPPath(random_sequence), self)
+
+            if best_cost > solution.cost:
                 best = solution
-                best_cost = solution_cost
-        return best, best_cost
+                best_cost = solution.cost
+        return best
 
     def tabu_search_basic(self, initial_solution=None,
-                          tabu_round_memory=150, max_iterations=500, worsen_factor=1.0):
-        if not initial_solution:
-            initial_solution, _ = self.generate_random_initial_solution()
+                          tabu_round_memory=200, max_iterations=5000, worsen_factor=1.0) -> Tuple[TSPSolution, int]:
+        if initial_solution is None:
+            initial_solution = self.generate_random_initial_solution()
 
         tabu = {}
         current_solution = initial_solution
-        currently_best_known_solution = (initial_solution, self.compute_path_cost(current_solution))
+        currently_best_known_solution = initial_solution
 
         for i in range(max_iterations):
             neighbourhood = self.generate_neighbours(current_solution)
-            x_cost = self.compute_path_cost(current_solution)
 
             if i % 25 == 0:
-                print(f'Iteration {i}\nx = {current_solution}\ncost = {x_cost}')
+                print(f'Iteration {i}\nx = {current_solution}\ncost = {current_solution.cost}')
                 print(f'tabu size = {len(tabu.values())}')
                 # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
+                print([n for n in neighbourhood if n not in tabu.keys()] == neighbourhood)
 
             best_neighbour = None
-            best_neighbour_cost = x_cost * worsen_factor
+            best_neighbour_cost = current_solution.cost * worsen_factor
 
             for neighbour in (n for n in neighbourhood if n not in tabu.keys()):
-                neighbour_cost = self.compute_path_cost(neighbour)
-                # tabu[neighbour] = (i, neighbour_cost)
-                if neighbour_cost < best_neighbour_cost:
-                    best_neighbour = neighbour
-                    best_neighbour_cost = neighbour_cost
 
+                tabu[neighbour] = (i, neighbour.cost)
+                if neighbour.cost < best_neighbour_cost:
+                    best_neighbour = neighbour
+                    best_neighbour_cost = neighbour.cost
+
+            # if i != 0 and currently_best_known_solution.tsp_path == current_solution.tsp_path:
+            #     return currently_best_known_solution, i
             currently_best_known_solution = \
-                (current_solution, x_cost) if x_cost < currently_best_known_solution[1] \
+                current_solution if current_solution.cost < currently_best_known_solution.cost \
                 else currently_best_known_solution
 
             if best_neighbour:
                 current_solution = best_neighbour
-                tabu[best_neighbour] = (i, best_neighbour_cost)
+                # tabu[best_neighbour] = (i, best_neighbour_cost)
 
                 # clean old tabu data
-                usability_threshold = pow(worsen_factor, 3) * best_neighbour_cost
+                usability_threshold = pow(worsen_factor, 2) * best_neighbour_cost
                 tabu = {k: (j, val)
                         for k, (j, val) in tabu.items()
                         if i - tabu_round_memory < j and val < usability_threshold}
 
             else:
-                return currently_best_known_solution[0], currently_best_known_solution[1], max_iterations
+                return currently_best_known_solution, max_iterations
 
-        return currently_best_known_solution[0], currently_best_known_solution[1], max_iterations
+        return currently_best_known_solution, max_iterations
 
 
 if __name__ == '__main__':
@@ -152,8 +210,8 @@ if __name__ == '__main__':
     print(random_permutation)
     t = time.time()
     # path, cost, iterations = ts.tabu_search_basic(TSPPath(random_permutation), worsen_factor=1.15)
-    path, cost, iterations = ts.tabu_search_basic(worsen_factor=1.1)
+    solution, iterations = ts.tabu_search_basic(worsen_factor=1.1)
     print(f'Time: {time.time() - t}')
     print(f'Initial solution: {random_permutation} Iterations: {iterations}')
-    print(path)
-    print(cost)
+    print(solution.tsp_path)
+    print(solution.cost)
