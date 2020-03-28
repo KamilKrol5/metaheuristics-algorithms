@@ -152,7 +152,8 @@ class TabuSearchTSP(TSPInstance):
         return best
 
     def tabu_search_basic(self, initial_solution=None,
-                          tabu_round_memory=200, max_iterations=5000, worsen_factor=1.0) -> Tuple[TSPSolution, int]:
+                          tabu_round_memory=1500, max_iterations=3000, worsen_factor=1.0) -> Tuple[TSPSolution, int]:
+        start_time = time.time()
         if initial_solution is None:
             initial_solution = self.generate_random_initial_solution()
 
@@ -161,6 +162,9 @@ class TabuSearchTSP(TSPInstance):
         currently_best_known_solution = initial_solution
 
         for i in range(max_iterations):
+            if time.time() - start_time > self.max_time:
+                return currently_best_known_solution, i-1
+
             neighbourhood = self.generate_neighbours(current_solution)
 
             if i % 25 == 0:
@@ -174,7 +178,7 @@ class TabuSearchTSP(TSPInstance):
 
             for neighbour in (n for n in neighbourhood if n not in tabu.keys()):
 
-                tabu[neighbour] = (i, neighbour.cost)
+                # tabu[neighbour] = (i, neighbour.cost)
                 if neighbour.cost < best_neighbour_cost:
                     best_neighbour = neighbour
                     best_neighbour_cost = neighbour.cost
@@ -187,10 +191,10 @@ class TabuSearchTSP(TSPInstance):
 
             if best_neighbour:
                 current_solution = best_neighbour
-                # tabu[best_neighbour] = (i, best_neighbour_cost)
+                tabu[best_neighbour] = (i, best_neighbour_cost)
 
                 # clean old tabu data
-                usability_threshold = pow(worsen_factor, 2) * best_neighbour_cost
+                usability_threshold = pow(worsen_factor, 3) * best_neighbour_cost
                 tabu = {k: (j, val)
                         for k, (j, val) in tabu.items()
                         if i - tabu_round_memory < j and val < usability_threshold}
