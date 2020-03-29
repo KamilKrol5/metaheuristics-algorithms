@@ -1,3 +1,4 @@
+import sys
 import time
 from abc import ABC
 from typing import List, Tuple
@@ -86,7 +87,6 @@ class TSPInstance(ABC):
     def read_input(filename=None) -> Tuple[np.ndarray, int]:
         with open(filename, 'r') if filename is not None else fileinput.input() as file:
             first_line = file.readline()
-            print([str(x) for x in first_line.split()])
             [max_time, cities_count] = [int(x) for x in first_line.split()]
             cities = np.ndarray((cities_count, cities_count))
 
@@ -173,11 +173,11 @@ class TabuSearchTSP(TSPInstance):
 
             neighbourhood = self.generate_neighbours(current_solution)
 
-            if i % 25 == 0:
-                print(f'Iteration {i}\nx = {current_solution}\ncost = {current_solution.cost}')
-                print(f'tabu size = {len(tabu.values())}')
-                # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
-                print([n for n in neighbourhood if n not in tabu.keys()] == neighbourhood)
+            # if i % 25 == 0:
+            #     print(f'Iteration {i}\nx = {current_solution}\ncost = {current_solution.cost}')
+            #     print(f'tabu size = {len(tabu.values())}')
+            #     # print(f'tabu: {[(str(x), i ,v) for x, (i, v) in tabu.items()]}')
+            #     print([n for n in neighbourhood if n not in tabu.keys()] == neighbourhood)
 
             best_neighbour = None
             best_neighbour_cost = current_solution.cost * worsen_factor
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     ts = TabuSearchTSP.from_stdin()
     t = time.time()
     solution, iterations = ts.tabu_search_basic(worsen_factor=1.1)
-    print(f'Time: {time.time() - t}')
-    print(f'Iterations: {iterations}')
-    print(solution.tsp_path)
+    print(f'Time: {time.time() - t}', file=sys.stderr)
+    print(f'Iterations: {iterations}', file=sys.stderr)
+    print(' '.join(str(x+1) for x in solution.tsp_path.move_sequence) + ' 1', file=sys.stderr)
     print(solution.cost)
