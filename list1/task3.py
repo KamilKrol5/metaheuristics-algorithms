@@ -1,10 +1,14 @@
 import fileinput
 from typing import Tuple
-
 import numpy as np
 
 
 class AgentWalk:
+    WALKABLE = 0
+    WALL = 1
+    START = 5
+    EXIT = 8
+
     def __init__(self, board: np.ndarray, max_time: int):
         self.max_time = max_time
         self.board = board
@@ -30,13 +34,16 @@ class AgentWalk:
                 for j, x in enumerate(str.rstrip(line)):
                     board[i][j] = int(x)
 
-        # print(cities)
         return board, max_time
 
-    def print_cities_matrix(self):
+    def print_board_matrix(self):
         return '\n'.join([f'{row}' for row in self.board])
+
+
+class AgentWalkWithTabuSearch(AgentWalk):
+    pass
 
 
 if __name__ == '__main__':
     sw = AgentWalk.from_file('l1z3a.txt')
-    print(sw.print_cities_matrix())
+    print(sw.print_board_matrix())
