@@ -1,5 +1,7 @@
 import sys
 import fileinput
+import time
+
 import numpy as np
 
 INITIAL_RANGE = 256
@@ -23,11 +25,13 @@ def generate_random_vector(dimension, low=-INITIAL_RANGE, high=INITIAL_RANGE):
 
 
 def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction=None, max_iterations=100000,
-                 max_fails=1):
+                 max_fails=1, max_execution_time=None):
+    start_time = time.time()
     x = initial_solution
     fails = 0
     for i in range(max_iterations):
-        if cond_of_satisfaction and cond_of_satisfaction(x):
+        if (max_execution_time is not None and time.time() - start_time >= max_execution_time) or \
+                (cond_of_satisfaction and cond_of_satisfaction(x)):
             return x
 
         # print(f'Iteration: {i}, x = {x}', file=sys.stderr)
@@ -92,13 +96,14 @@ def neighbours_for_griewank(s, number_of_neighbours=1):
 
 
 def get_input():
+    _max_time, _fun = None, None
     if len(sys.argv) > 1 and sys.argv[1] == '--arguments':
         _max_time = sys.argv[2]
         _fun = sys.argv[3]
     else:
         for line in fileinput.input():
             _max_time, _fun = line.rstrip().split()
-    return _max_time, _fun
+    return int(_max_time), _fun
 
 
 if __name__ == '__main__':
@@ -109,13 +114,15 @@ if __name__ == '__main__':
         res = local_search(happy_cat,
                            lambda t: neighbours_for_cat_random(t, 1000),
                            X,
-                           max_fails=1)
+                           max_fails=1,
+                           max_execution_time=max_time)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {happy_cat(res)}')
     elif fun == 'g':
         X = generate_random_vector(4, -2560, 2560)
         res = local_search(griewank,
                            lambda t: neighbours_for_griewank(t, 1000),
-                           X)
+                           X,
+                           max_execution_time=max_time)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {griewank(res)}')
     else:
         print('Unknown function. Correct arguments are: <time> h/g.')
