@@ -1,3 +1,4 @@
+import fileinput
 from typing import Tuple
 
 import numpy as np
@@ -13,9 +14,14 @@ class AgentWalk:
         board_, max_time = AgentWalk.read_input(filename)
         return cls(board_, max_time)
 
+    @classmethod
+    def from_stdin(cls):
+        cities, max_time = AgentWalk.read_input()
+        return cls(cities, max_time)
+
     @staticmethod
-    def read_input(filename: str) -> Tuple[np.ndarray, int]:
-        with open(filename, 'r') as file:
+    def read_input(filename=None) -> Tuple[np.ndarray, int]:
+        with open(filename, 'r') if filename is not None else fileinput.input() as file:
             first_line = file.readline()
             print([str(x) for x in first_line.split()])
             [max_time, rows, columns] = [int(x) for x in first_line.split()]
