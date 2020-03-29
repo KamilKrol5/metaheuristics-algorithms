@@ -21,14 +21,15 @@ def generate_random_vector(dimension, low=-INITIAL_RANGE, high=INITIAL_RANGE):
                            if x fills the condition of satisfaction/end condition, False otherwise.
                            It determines if the solution is good enough to end the job.
     max_iterations - An integer which determines maximum number of iterations.
+    max_execution_time - The function each round/iteration will check if its execution time is not exceeded.
+    If it is, the function ends its work and returns the current solution.
 """
 
 
 def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction=None, max_iterations=100000,
-                 max_fails=1, max_execution_time=None):
+                 max_execution_time=None):
     start_time = time.time()
     x = initial_solution
-    fails = 0
     for i in range(max_iterations):
         if (max_execution_time is not None and time.time() - start_time >= max_execution_time) or \
                 (cond_of_satisfaction and cond_of_satisfaction(x)):
@@ -49,9 +50,7 @@ def local_search(function, neighbour_function, initial_solution, cond_of_satisfa
         # in case all neighbours has been checked and none of them is better solution the work is
         # considered to be done
         else:
-            fails += 1
-            if fails >= max_fails:
-                return x
+            return x
     # if max iterations are reached then current solution is returned
     else:
         return x
@@ -114,7 +113,6 @@ if __name__ == '__main__':
         res = local_search(happy_cat,
                            lambda t: neighbours_for_cat_random(t, 1000),
                            X,
-                           max_fails=1,
                            max_execution_time=max_time)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {happy_cat(res)}')
     elif fun == 'g':
