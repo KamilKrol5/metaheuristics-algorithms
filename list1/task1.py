@@ -22,7 +22,7 @@ def generate_random_vector(dimension, low=-INITIAL_RANGE, high=INITIAL_RANGE):
 """
 
 
-def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction, max_iterations=100000,
+def local_search(function, neighbour_function, initial_solution, cond_of_satisfaction=None, max_iterations=100000,
                  max_fails=1):
     x = initial_solution
     fails = 0
@@ -109,15 +109,13 @@ if __name__ == '__main__':
         res = local_search(happy_cat,
                            lambda t: neighbours_for_cat_random(t, 1000),
                            X,
-                           None,
                            max_fails=1)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {happy_cat(res)}')
     elif fun == 'g':
         X = generate_random_vector(4, -2560, 2560)
         res = local_search(griewank,
                            lambda t: neighbours_for_griewank(t, 1000),
-                           X,
-                           None)
+                           X)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {griewank(res)}')
     else:
         print('Unknown function. Correct arguments are: <time> h/g.')
