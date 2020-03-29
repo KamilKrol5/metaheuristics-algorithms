@@ -1,4 +1,5 @@
 import sys
+import fileinput
 import numpy as np
 
 INITIAL_RANGE = 256
@@ -90,9 +91,20 @@ def neighbours_for_griewank(s, number_of_neighbours=1):
     ]
 
 
+def get_input():
+    if len(sys.argv) > 1 and sys.argv[1] == '--arguments':
+        _max_time = sys.argv[2]
+        _fun = sys.argv[3]
+    else:
+        for line in fileinput.input():
+            _max_time, _fun = line.rstrip().split()
+    return _max_time, _fun
+
+
 if __name__ == '__main__':
-    max_time = int(sys.argv[1])
-    if sys.argv[2] == 'h':
+    max_time, fun = get_input()
+
+    if fun == 'h':
         X = generate_random_vector(4, -2, 2)
         res = local_search(happy_cat,
                            lambda t: neighbours_for_cat_random(t, 1000),
@@ -100,7 +112,7 @@ if __name__ == '__main__':
                            None,
                            max_fails=1)
         print(f'{res[0]} {res[1]} {res[2]} {res[3]} {happy_cat(res)}')
-    elif sys.argv[2] == 'g':
+    elif fun == 'g':
         X = generate_random_vector(4, -2560, 2560)
         res = local_search(griewank,
                            lambda t: neighbours_for_griewank(t, 1000),
