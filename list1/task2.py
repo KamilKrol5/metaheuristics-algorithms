@@ -2,6 +2,7 @@ import time
 from abc import ABC
 from typing import List, Tuple
 import numpy as np
+import fileinput
 
 
 def swap_tuple(tup, i, j):
@@ -76,9 +77,14 @@ class TSPInstance(ABC):
         cities, max_time = TSPInstance.read_input(filename)
         return cls(cities, max_time)
 
+    @classmethod
+    def from_stdin(cls):
+        cities, max_time = TSPInstance.read_input()
+        return cls(cities, max_time)
+
     @staticmethod
-    def read_input(filename: str) -> Tuple[np.ndarray, int]:
-        with open(filename, 'r') as file:
+    def read_input(filename=None) -> Tuple[np.ndarray, int]:
+        with open(filename, 'r') if filename is not None else fileinput.input() as file:
             first_line = file.readline()
             print([str(x) for x in first_line.split()])
             [max_time, cities_count] = [int(x) for x in first_line.split()]
@@ -206,16 +212,10 @@ class TabuSearchTSP(TSPInstance):
 
 
 if __name__ == '__main__':
-    ts = TabuSearchTSP.from_file('l1z2b.txt')
-    # print(ts.print_cities_matrix())
-    # print(ts.compute_path_cost(TSPPath([0, 3, 2, 1, 4])))
-    # print([str(x) for x in ts.generate_neighbours(TSPPath([1, 2, 3, 4, 5]))])
-    random_permutation = tuple([0] + list(np.random.permutation(range(1, ts.cities_count))))
-    print(random_permutation)
+    ts = TabuSearchTSP.from_stdin()
     t = time.time()
-    # path, cost, iterations = ts.tabu_search_basic(TSPPath(random_permutation), worsen_factor=1.15)
     solution, iterations = ts.tabu_search_basic(worsen_factor=1.1)
     print(f'Time: {time.time() - t}')
-    print(f'Initial solution: {random_permutation} Iterations: {iterations}')
+    print(f'Iterations: {iterations}')
     print(solution.tsp_path)
     print(solution.cost)
