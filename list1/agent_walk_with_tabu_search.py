@@ -59,7 +59,7 @@ class AgentWalkWithTabuSearch(AgentWalk):
     def tabu_search(self, tabu_max_size=10, max_iterations=100,
                     neighbours_count=1000) -> Tuple[Path, int]:
         end_time = time.time() + self.max_time
-        print(f'max time = {self.max_time}')
+        # print(f'max time = {self.max_time}')
         tabu = deque(maxlen=tabu_max_size)
 
         current_solution = self.generate_acceptable_solution()
