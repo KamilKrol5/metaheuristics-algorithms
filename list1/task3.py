@@ -1,7 +1,6 @@
 import sys
 from collections import namedtuple
-import numpy as np
-from agent_walk_with_tabu_search import AgentWalkWithTabuSearch
+from agent_walk_with_tabu_search import *
 
 WALKABLE = 0
 WALL = 1

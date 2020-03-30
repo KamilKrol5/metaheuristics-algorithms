@@ -4,7 +4,7 @@ from copy import copy
 from typing import Tuple, List
 import numpy as np
 
-from agent import Agent
+from agent_walk import Agent
 from path import Path
 from agent_walk import AgentWalk
 from task3 import directions, WALKABLE, EXIT
