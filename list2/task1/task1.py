@@ -1,8 +1,9 @@
+import time
 import fileinput
 import sys
 from collections import deque
+from itertools import combinations_with_replacement
 import numpy as np
-from itertools import combinations_with_replacement, permutations, combinations
 
 
 def salomon(x: np.ndarray):
@@ -23,7 +24,7 @@ def salomon_neighbourhood_generator(x: np.ndarray):
 
 
 def salomon_random_neighbour(x: np.ndarray):
-    return x * 0.5 * np.random.choice([1, -1], 4)
+    return x + x * (np.random.random(4) * 2 - 1)
 
 
 def get_input():
@@ -48,10 +49,12 @@ def simulated_annealing(initial_solution,
                         random_neighbour_function,
                         initial_temperature,
                         red_factor,
+                        max_execution_time,
                         c=-1):
+    end_time = time.time() + max_execution_time
     temperature = initial_temperature
     current_solution = initial_solution
-    while temperature > red_factor:
+    while temperature > red_factor and time.time() < end_time:
         neighbour = random_neighbour_function(current_solution)
         delta_f = function(neighbour) - function(current_solution)
         if probability(delta_f, temperature, c) > np.random.rand():
@@ -62,12 +65,13 @@ def simulated_annealing(initial_solution,
 
 
 if __name__ == '__main__':
-    time, *v = get_input()
+    time_, *v = get_input()
     v = np.array(v)
     solution, value = simulated_annealing(v,
                                           salomon,
                                           salomon_random_neighbour,
                                           initial_temperature=200,
-                                          red_factor=0.1)
+                                          max_execution_time=time_,
+                                          red_factor=0.005)
     print(solution)
     print(value)
