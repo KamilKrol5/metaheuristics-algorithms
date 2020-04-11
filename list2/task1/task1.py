@@ -73,5 +73,4 @@ if __name__ == '__main__':
                                           initial_temperature=200,
                                           max_execution_time=time_,
                                           red_factor=0.005)
-    print(solution)
-    print(value)
+    print(*solution.flatten(), value)
