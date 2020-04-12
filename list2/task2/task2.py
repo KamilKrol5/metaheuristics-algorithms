@@ -64,15 +64,27 @@ class ImageApproximationInstance:
             return 1
         return 1.0 / (1.0 + np.power(np.e, c * delta_f / temperature))
 
+    """ Generates initial solution from matrix.
+        It is created as matrix of K x K blocks filled with mean color in original matrix approximated
+        to the closest target color (there is a mean value of colors computed in each block and then 
+        that value is used to decide which color from target colors should be taken as color for entire block)
+        If matrix size is not divisible by K, then blocks at the end (right and bottom) are extended to cover
+        the entire matrix.
+    """
     def _generate_initial_solution(self):
         working_matrix = np.copy(self.matrix)
         k = self.k
-        for i in range(0, self.rows, k):
-            for j in range(0, self.columns, k):
-                mean_value_in_submatrix = np.mean(working_matrix[i:i + k][j:j + k])
-                working_matrix[i:i + k][j:j + k] = \
+        for i in range(0, self.rows - k + 1, k):
+            row_end_range = i + k
+            if i + 2 * k > self.rows:
+                row_end_range = i + 2 * k
+            for j in range(0, self.columns - k + 1, k):
+                column_end_range = j + k
+                if j + 2 * k > self.columns:
+                    column_end_range = j + 2 * k
+                mean_value_in_submatrix = np.mean(working_matrix[i:row_end_range, j:column_end_range])
+                working_matrix[i:row_end_range, j:column_end_range] = \
                     self.convert_value_to_closest_target_value(mean_value_in_submatrix)
-                # TODO finish it
         return working_matrix
 
     def simulated_annealing(self,
@@ -84,6 +96,7 @@ class ImageApproximationInstance:
 
         current_solution = self._generate_initial_solution()
         print(current_solution)
+        self.visualise_matrix(current_solution)
 
         while temperature > red_factor and time.time() < end_time:
 
@@ -110,6 +123,9 @@ class ImageApproximationInstance:
 
 if __name__ == '__main__':
     problemInstance = ImageApproximationInstance.from_file_input([0, 32, 64, 128, 160, 192, 223, 255])
+    init_ = problemInstance._generate_initial_solution()
+    problemInstance.visualise_matrix(init_)
+    print(problemInstance._compute_mse_of_image_and_other(init_))
     # problemInstance.visualise()
     # print(problemInstance.compute_mse(np.array([[1, 1, 1],
     #                                       [2, 2, 2]]), np.array([[0, 0, 0],
