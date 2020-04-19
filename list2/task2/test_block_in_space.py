@@ -96,11 +96,11 @@ class TestBlockInSpace(TestCase):
         self.assertEqual(blocks_size - 1, len(self.block.space_of_blocks))
 
     def test_extend_towards_neighbour(self):
-        is_successful = self.block.extend_towards_neighbour(self.on_left, (1, 1), 10)
+        is_successful = self.block.expand_towards_neighbour(self.on_left, (1, 1), 10)
         self.assertFalse(is_successful)
         old_block = copy(self.block)
         old_left = copy(self.on_left)
-        is_successful = self.block.extend_towards_neighbour(self.on_left, self.block.DIRECTIONS['L'], 2)
+        is_successful = self.block.expand_towards_neighbour(self.on_left, self.block.DIRECTIONS['L'], 2)
         self.assertTrue(is_successful)
 
         # y did not change
@@ -113,3 +113,6 @@ class TestBlockInSpace(TestCase):
         self.assertEqual(self.block.x_start, old_block.x_start - 2)
         self.assertEqual(self.on_left.x_length, old_left.x_length - 2)
         self.assertEqual(self.on_left.x_start, old_left.x_start)
+
+        self.assertNotIn(old_block, self.blocks)
+        self.assertNotIn(old_left, self.blocks)
