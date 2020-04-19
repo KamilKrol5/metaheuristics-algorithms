@@ -72,7 +72,8 @@ class _BlockInSpace(_Block):
         if len(neighbours_in_direction) != 1:
             return False
         neighbour = neighbours_in_direction.pop()
-        return neighbour.y_length > min_block_y_size and neighbour.x_length > min_block_x_size
+        return neighbour.y_length > min_block_y_size * abs(direction[1]) and \
+            neighbour.x_length > min_block_x_size * abs(direction[0])
 
     """ Returns neighbour in the given direction which can be merged with self-block.
         If there is no possible candidate for merge, the method returns None.
@@ -91,7 +92,7 @@ class _BlockInSpace(_Block):
         Returns bool value telling if merge was performed. Modifies 'other_blocks' collection.
     """
 
-    def _merge_in_direction(self, direction):
+    def merge_in_direction(self, direction):
         other = self.can_merge_in_direction(direction)
         if other is None:
             return False
@@ -100,11 +101,7 @@ class _BlockInSpace(_Block):
         # specific situations and error handling
         if up_or_down and left_or_right:
             raise ValueError('Merging in both directions at once is not supported')
-        if not up_or_down and not left_or_right:
-            print(f'Warning: Cannot merge in (0,0) direction', file=sys.stderr)
-            return False
 
-        self.space_of_blocks.remove(other)
         # merging itself
         if up_or_down:
             if direction[1] == -1:  # down
@@ -120,6 +117,11 @@ class _BlockInSpace(_Block):
                 self.y_start = other.y_start
             elif direction[0] == 1:  # right
                 self.x_length += other.x_length
+        else:
+            print(f'Warning: Cannot merge in (0,0) direction', file=sys.stderr)
+            return False
+
+        self.space_of_blocks.remove(other)
         return True
 
     # def merge_with_same_value_blocks(self, blocks: Set['_Block']):
