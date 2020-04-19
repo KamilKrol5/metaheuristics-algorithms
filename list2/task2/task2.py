@@ -1,23 +1,13 @@
 import fileinput
 import sys
 import time
-from copy import deepcopy
-from dataclasses import make_dataclass
-from typing import Tuple, List, Set
-from itertools import zip_longest
-
 import numpy as np
+from copy import deepcopy
+from typing import Tuple, List, Set
 from matplotlib import pyplot as plt
 
 
 class _Block:
-    DIRECTIONS = {
-        'U': (0, 1),
-        'R': (1, 0),
-        'D': (0, -1),
-        'L': (-1, 0),
-    }
-
     def __init__(self, x_start, y_start, x_length, y_length, value_inside):
         self.x_start = x_start
         self.y_start = y_start
@@ -29,18 +19,31 @@ class _Block:
         return hash((self.x_start, self.y_start))
 
     def contains(self, x, y):
-        return self.x_start <= x <= self.x_start + self.x_length and \
-               self.y_start <= y <= self.y_start + self.y_length
+        return self.x_start <= x < self.x_start + self.x_length and \
+               self.y_start <= y < self.y_start + self.y_length
 
-    def neighbours_in_direction(self, direction, other_blocks: List['_Block']):
+
+class _BlockInSpace(_Block):
+    DIRECTIONS = {
+        'U': (0, 1),
+        'R': (1, 0),
+        'D': (0, -1),
+        'L': (-1, 0),
+    }
+
+    def __init__(self, x_start, y_start, x_length, y_length, value_inside, space_of_blocks):
+        super().__init__(x_start, y_start, x_length, y_length, value_inside)
+        self.space_of_blocks = space_of_blocks
+
+    def neighbours_in_direction(self, direction):
         neighbours = set()
         if direction[0] == 0:  # U, D
             for x in range(self.x_start, self.x_start + self.x_length, 1):
                 y = self.y_start
                 if direction[1] == -1:
                     y = y + self.y_length
-                for b in other_blocks:
-                    if b.contains(x, y + direction[1]):
+                for b in self.space_of_blocks:
+                    if b.contains(x, y - direction[1]):
                         neighbours.add(b)
                         break
 
@@ -49,23 +52,23 @@ class _Block:
                 x = self.x_start
                 if direction[0] == 1:
                     x = x + self.x_length
-                for b in other_blocks:
+                for b in self.space_of_blocks:
                     if b.contains(x + direction[0], y):
                         neighbours.add(b)
                         break
 
         return neighbours
 
-    def get_neighbours(self, other_blocks, max_number_of_neighbours_in_one_direction=np.inf):
+    def get_neighbours(self, max_number_of_neighbours_in_one_direction=np.inf):
         neighbours = set()
-        for d in self.DIRECTIONS:
-            new_neighbours = self.neighbours_in_direction(d, other_blocks)
+        for d in self.DIRECTIONS.values():
+            new_neighbours = self.neighbours_in_direction(d)
             if len(new_neighbours) <= max_number_of_neighbours_in_one_direction:
                 neighbours.update(new_neighbours)
         return neighbours
 
-    def can_expand_in_direction(self, direction, other_blocks, min_block_x_size, min_block_y_size):
-        neighbours_in_direction = self.neighbours_in_direction(direction, other_blocks)
+    def can_expand_in_direction(self, direction, min_block_x_size, min_block_y_size):
+        neighbours_in_direction = self.neighbours_in_direction(direction)
         if len(neighbours_in_direction) != 1:
             return False
         neighbour = neighbours_in_direction.pop()
@@ -74,8 +77,9 @@ class _Block:
     """ Returns neighbour in the given direction which can be merged with self-block.
         If there is no possible candidate for merge, the method returns None.
     """
-    def can_merge_in_direction(self, direction, blocks):
-        neighbours_on_direction = self.neighbours_in_direction(direction, blocks)
+
+    def can_merge_in_direction(self, direction):
+        neighbours_on_direction = self.neighbours_in_direction(direction)
         if len(neighbours_on_direction) != 1:
             return None
         neighbour = neighbours_on_direction.pop()
@@ -86,8 +90,9 @@ class _Block:
     """ Merges given 'other' block with self-block if possible. 
         Returns bool value telling if merge was performed. Modifies 'other_blocks' collection.
     """
-    def _merge_in_direction(self, direction, other_blocks: Set['_Block']):
-        other = self.can_merge_in_direction(direction, other_blocks)
+
+    def _merge_in_direction(self, direction):
+        other = self.can_merge_in_direction(direction)
         if other is None:
             return False
         up_or_down, left_or_right = direction[0] == 0, direction[1] == 0
@@ -99,33 +104,29 @@ class _Block:
             print(f'Warning: Cannot merge in (0,0) direction', file=sys.stderr)
             return False
 
-        other_blocks.remove(other)
+        self.space_of_blocks.remove(other)
         # merging itself
         if up_or_down:
-            if direction[1] == -1: #  down
+            if direction[1] == -1:  # down
                 self.y_length += other.y_length
-            elif direction[1] == 1: #  up
+            elif direction[1] == 1:  # up
                 self.y_length += other.y_length
                 self.x_start = other.x_start
                 self.y_start = other.y_start
         elif left_or_right:
-            if direction[0] == -1: #  left
+            if direction[0] == -1:  # left
                 self.x_length += other.x_length
                 self.x_start = other.x_start
                 self.y_start = other.y_start
-            elif direction[0] == 1: #  right
+            elif direction[0] == 1:  # right
                 self.x_length += other.x_length
         return True
-
 
     # def merge_with_same_value_blocks(self, blocks: Set['_Block']):
     #     cannot_merge_more = False
     #     while not cannot_merge_more:
     #         cannot_merge_more = True
     #         for d in self.DIRECTIONS:
-
-
-
 
 
 class _Solution:
@@ -160,12 +161,32 @@ class ImageApproximationInstance:
 
     """ Destroys provided solution - it does not copy the matrix not the blocks. 
     """
+
     def _get_random_neighbour(self, solution: _Solution) -> _Solution:
-        for block in solution.blocks:
-            block.value_inside = np.random.choice(self.target_color_values)
-            end_row = block.x_start + block.x_length
-            end_column = block.y_start + block.y_length
-            solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
+        can_resize_x = solution.x_free != 0
+        can_resize_y = solution.y_free != 0
+        resize_x, resize_y = 0, 0
+        if can_resize_x:
+            resize_x = np.random.choice([0, 1])
+        if can_resize_y:
+            resize_y = np.random.choice([0, 1])
+
+        # for block in solution.blocks:
+        #     block.value_inside = np.random.choice(self.target_color_values)
+        #     end_row = block.x_start + block.x_length
+        #     end_column = block.y_start + block.y_length
+        #     solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
+        # return solution
+        block = np.random.choice(solution.blocks)
+        block.value_inside = np.random.choice(self.target_color_values)
+        end_row = block.x_start + block.x_length
+        end_column = block.y_start + block.y_length
+        solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
+
+        # resising
+        block_to_resize: _Block = np.random.choice(solution.blocks)
+        neighbours = [b for b in solution.blocks if b]
+        # block_to_resize.
         return solution
 
     @classmethod
