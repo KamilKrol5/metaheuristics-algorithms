@@ -1,6 +1,7 @@
 import fileinput
 import sys
 import time
+import random
 import numpy as np
 from copy import deepcopy
 from typing import Tuple, List
@@ -18,6 +19,12 @@ class _Block:
     def __hash__(self):
         return hash((self.x_start, self.y_start))
 
+    def __str__(self):
+        return f'<(x,y) = ({self.x_start},{self.y_start}), {self.x_length} x {self.y_length}>'
+
+    def __repr__(self):
+        return str(self)
+
     def contains(self, x, y):
         return self.x_start <= x < self.x_start + self.x_length and \
                self.y_start <= y < self.y_start + self.y_length
@@ -34,6 +41,19 @@ class _BlockInSpace(_Block):
     def __init__(self, x_start, y_start, x_length, y_length, value_inside, space_of_blocks):
         super().__init__(x_start, y_start, x_length, y_length, value_inside)
         self.space_of_blocks = space_of_blocks
+
+    def is_space_valid(self, x, y):
+        arr = np.full((x, y), 1, dtype=int)
+        for block_ in self.space_of_blocks:
+            end_x_index = block_.x_start + block_.x_length
+            end_y_index = block_.y_start + block_.y_length
+            arr[
+                block_.x_start:end_x_index,
+                block_.y_start:end_y_index
+            ] = 0
+
+        # print(f'Control sum = {np.sum(arr)}')
+        return np.sum(arr)
 
     def neighbours_in_direction(self, direction):
         neighbours = set()
@@ -59,12 +79,11 @@ class _BlockInSpace(_Block):
 
         return neighbours
 
-    def get_neighbours(self, max_number_of_neighbours_in_one_direction=np.inf):
+    def get_neighbours(self):
         neighbours = set()
         for d in self.DIRECTIONS.values():
             new_neighbours = self.neighbours_in_direction(d)
-            if len(new_neighbours) <= max_number_of_neighbours_in_one_direction:
-                neighbours.update(new_neighbours)
+            neighbours.update(new_neighbours)
         return neighbours
 
     def can_expand_in_direction(self, direction, min_block_x_size, min_block_y_size):
@@ -72,8 +91,10 @@ class _BlockInSpace(_Block):
         if len(neighbours_in_direction) != 1:
             return False, None
         neighbour = neighbours_in_direction.pop()
-        return neighbour.y_length > min_block_y_size * abs(direction[1]) and \
-            neighbour.x_length > min_block_x_size * abs(direction[0]), neighbour
+        if abs(direction[1]) == 0:
+            return min_block_x_size < neighbour.x_length and neighbour.y_length == self.y_length, neighbour
+        elif abs(direction[0] == 0):
+            return min_block_y_size < neighbour.y_length and neighbour.x_length == self.x_length, neighbour
 
     """ Returns neighbour in the given direction which can be merged with self-block.
         If there is no possible candidate for merge, the method returns None.
@@ -85,6 +106,10 @@ class _BlockInSpace(_Block):
             return None
         neighbour = neighbours_on_direction.pop()
         if neighbour.value_inside != self.value_inside:
+            return None
+        if abs(direction[1]) == 0 and neighbour.y_length != self.y_length:
+            return None
+        elif abs(direction[0] == 0) and neighbour.x_length != self.x_length:
             return None
         return neighbour
 
@@ -101,7 +126,8 @@ class _BlockInSpace(_Block):
         # specific situations and error handling
         if up_or_down and left_or_right:
             raise ValueError('Merging in two directions at once is not supported')
-
+        print('BEFORE')
+        print([str(bl) for bl in self.space_of_blocks])
         # merging itself
         if up_or_down:
             if direction[1] == -1:  # down
@@ -122,6 +148,8 @@ class _BlockInSpace(_Block):
             return False
 
         self.space_of_blocks.remove(other)
+        print('AFTER')
+        print([str(bl) for bl in self.space_of_blocks])
         return True
 
     """ Extends self-block and reduces the neighbour size by given value.
@@ -136,10 +164,13 @@ class _BlockInSpace(_Block):
         Returns:
             bool: True if extension was performed successfully, False otherwise.
     """
-    def extend_towards_neighbour(self, neighbour: '_BlockInSpace', direction, difference):
+    def expand_towards_neighbour(self, neighbour: '_BlockInSpace', direction, difference):
         if direction not in self.DIRECTIONS.values():
             print(f'Warning: Extension in the direction not present in DIRECTIONS dictionary is not supported.',
                   file=sys.stderr)
+            return False
+        if self == neighbour:
+            print(f'Cannot merge with itself', file=sys.stderr)
             return False
         if direction[0] == 0:  # U or D
             self.y_length += difference
@@ -159,11 +190,17 @@ class _BlockInSpace(_Block):
 
 
 class _Solution:
-    def __init__(self, image_matrix, blocks: List[_Block], x_free, y_free):
+    def __init__(self, image_matrix, blocks: List[_BlockInSpace], x_free, y_free):
         self.x_free = x_free
         self.y_free = y_free
-        self.blocks: List[_Block] = blocks
+        self.blocks: List[_BlockInSpace] = blocks
         self.matrix = image_matrix
+
+    def validate(self):
+        x, y = self.matrix.shape
+        sum_ = np.sum([bl.is_space_valid(x, y) for bl in self.blocks])
+        print(f'Control sum = {sum_}')
+        return sum_ == 0
 
 
 class ImageApproximationInstance:
@@ -192,30 +229,38 @@ class ImageApproximationInstance:
     """
 
     def _get_random_neighbour(self, solution: _Solution) -> _Solution:
-        can_resize_x = solution.x_free != 0
-        can_resize_y = solution.y_free != 0
-        resize_x, resize_y = 0, 0
-        if can_resize_x:
-            resize_x = np.random.choice([0, 1])
-        if can_resize_y:
-            resize_y = np.random.choice([0, 1])
-
-        # for block in solution.blocks:
-        #     block.value_inside = np.random.choice(self.target_color_values)
-        #     end_row = block.x_start + block.x_length
-        #     end_column = block.y_start + block.y_length
-        #     solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
-        # return solution
-        block = np.random.choice(solution.blocks)
+        block: _BlockInSpace = np.random.choice(solution.blocks)
         block.value_inside = np.random.choice(self.target_color_values)
         end_row = block.x_start + block.x_length
         end_column = block.y_start + block.y_length
         solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
 
-        # resising
-        block_to_resize: _Block = np.random.choice(solution.blocks)
-        neighbours = [b for b in solution.blocks if b]
-        # block_to_resize.
+        # merging if possible
+        block: _BlockInSpace = np.random.choice(solution.blocks)
+        direction = random.choice(list(block.DIRECTIONS.values()))
+        block.merge_in_direction(direction)
+
+        # extend if possible
+        block_to_resize: _BlockInSpace = np.random.choice(solution.blocks)
+        for direction in block_to_resize.DIRECTIONS.values():
+            can_extend, candidate = block_to_resize.can_expand_in_direction(direction, self.k, self.k)
+            if can_extend:
+                result = block_to_resize.expand_towards_neighbour(candidate, direction, 1)
+                if result:
+                    resized_end_x_index = block_to_resize.x_start + block_to_resize.x_length
+                    resized_end_y_index = block_to_resize.y_start + block_to_resize.y_length
+                    candidate_end_x_index = candidate.x_start + candidate.x_length
+                    candidate_end_y_index = candidate.y_start + candidate.y_length
+                    solution.matrix[
+                        block_to_resize.x_start:resized_end_x_index,
+                        block_to_resize.y_start:resized_end_y_index
+                    ] = block_to_resize.value_inside
+                    solution.matrix[
+                        candidate.x_start:candidate_end_x_index,
+                        candidate.y_start:candidate_end_y_index
+                    ] = candidate.value_inside
+                    # print([str(bl) for bl in block_to_resize.space_of_blocks])
+                    # self.visualise_matrix(solution.matrix)
         return solution
 
     @classmethod
@@ -294,6 +339,7 @@ class ImageApproximationInstance:
 
             neighbour: _Solution = self._get_random_neighbour(working_solution)
             # self.visualise_matrix(neighbour.matrix)
+            neighbour.validate()
 
             delta_f = \
                 self._compute_mse_of_image_and_other(neighbour.matrix) - self._compute_mse_of_image_and_other(
@@ -301,7 +347,7 @@ class ImageApproximationInstance:
             print('delta = ', delta_f, f'probability = {self._probability(delta_f, temperature, c)}')
 
             if self._probability(delta_f, temperature, c) > np.random.rand():
-                self.visualise_matrix(neighbour.matrix)
+                # self.visualise_matrix(neighbour.matrix)
                 current_solution = deepcopy(neighbour)
             temperature = temperature * (1 - red_factor)
 
