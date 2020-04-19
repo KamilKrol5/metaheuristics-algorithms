@@ -3,7 +3,7 @@ import sys
 import time
 import numpy as np
 from copy import deepcopy
-from typing import Tuple, List, Set
+from typing import Tuple, List
 from matplotlib import pyplot as plt
 
 
@@ -70,10 +70,10 @@ class _BlockInSpace(_Block):
     def can_expand_in_direction(self, direction, min_block_x_size, min_block_y_size):
         neighbours_in_direction = self.neighbours_in_direction(direction)
         if len(neighbours_in_direction) != 1:
-            return False
+            return False, None
         neighbour = neighbours_in_direction.pop()
         return neighbour.y_length > min_block_y_size * abs(direction[1]) and \
-            neighbour.x_length > min_block_x_size * abs(direction[0])
+            neighbour.x_length > min_block_x_size * abs(direction[0]), neighbour
 
     """ Returns neighbour in the given direction which can be merged with self-block.
         If there is no possible candidate for merge, the method returns None.
@@ -100,7 +100,7 @@ class _BlockInSpace(_Block):
 
         # specific situations and error handling
         if up_or_down and left_or_right:
-            raise ValueError('Merging in both directions at once is not supported')
+            raise ValueError('Merging in two directions at once is not supported')
 
         # merging itself
         if up_or_down:
@@ -124,11 +124,38 @@ class _BlockInSpace(_Block):
         self.space_of_blocks.remove(other)
         return True
 
-    # def merge_with_same_value_blocks(self, blocks: Set['_Block']):
-    #     cannot_merge_more = False
-    #     while not cannot_merge_more:
-    #         cannot_merge_more = True
-    #         for d in self.DIRECTIONS:
+    """ Extends self-block and reduces the neighbour size by given value.
+        There is an assumption that block provided as neighbour, actually is a neighbour in the provided direction.
+        
+        Args:
+            neighbour (_BlockInSpace): neighbour (on provided direction side) of block to be extended.
+            It is not checked if block provided as neighbour actually is the neighbour.
+            direction (Tuple[int, int]): The direction in which extension is to be performed.
+            difference (int): the increase of self-block size. Simultaneously it is the decrease of neighbour.
+            
+        Returns:
+            bool: True if extension was performed successfully, False otherwise.
+    """
+    def extend_towards_neighbour(self, neighbour: '_BlockInSpace', direction, difference):
+        if direction not in self.DIRECTIONS.values():
+            print(f'Warning: Extension in the direction not present in DIRECTIONS dictionary is not supported.',
+                  file=sys.stderr)
+            return False
+        if direction[0] == 0:  # U or D
+            self.y_length += difference
+            neighbour.y_length -= difference
+            if direction[1] == -1:  # D
+                neighbour.y_start += difference
+            elif direction[1] == 1:  # U
+                self.y_start -= difference
+        elif direction[1] == 0:  # L or R
+            self.x_length += difference
+            neighbour.x_length -= difference
+            if direction[0] == -1:  # L
+                self.x_start -= difference
+            elif direction[0] == 1:  # R
+                neighbour.x_start += difference
+        return True
 
 
 class _Solution:
@@ -161,7 +188,7 @@ class ImageApproximationInstance:
                 return self.target_color_values[i]
         return self.target_color_values[-1]
 
-    """ Destroys provided solution - it does not copy the matrix not the blocks. 
+    """ Destroys provided solution - it does not copy the matrix nor the blocks. 
     """
 
     def _get_random_neighbour(self, solution: _Solution) -> _Solution:
@@ -222,7 +249,8 @@ class ImageApproximationInstance:
     def _probability(delta_f, temperature, c):
         if delta_f <= 0:
             return 1
-        return 1.0 / (1.0 + np.power(np.e, c * delta_f / temperature))
+        # return 1.0 / (1.0 + np.power(np.e, c * delta_f / temperature))
+        return np.power(np.e, -delta_f / temperature)
 
     """ Generates initial solution from matrix.
         It is created as matrix of K x K blocks filled with mean color in original matrix approximated
@@ -247,13 +275,14 @@ class ImageApproximationInstance:
                 mean_value_in_submatrix = np.mean(working_matrix[i:row_end_range, j:column_end_range])
                 working_matrix[i:row_end_range, j:column_end_range] = \
                     self._convert_value_to_closest_target_value(mean_value_in_submatrix)
-                blocks_.append(_Block(i, j, row_end_range - i, column_end_range - j, mean_value_in_submatrix))
+                blocks_.append(
+                    _BlockInSpace(i, j, row_end_range - i, column_end_range - j, mean_value_in_submatrix, blocks_))
         return _Solution(working_matrix, blocks_, self.rows % k, self.columns % k)
 
     def simulated_annealing(self,
                             initial_temperature,
                             red_factor,
-                            c=1):
+                            c=-1):
         end_time = time.time() + self.max_time
         temperature = initial_temperature
 
@@ -298,7 +327,7 @@ if __name__ == '__main__':
     # problemInstance.visualise_matrix(problemInstance.matrix)
     print('MSE for initial solution = ', problemInstance._compute_mse_of_image_and_other(init_.matrix))
 
-    sol, val = problemInstance.simulated_annealing(100, 0.0005)
+    sol, val = problemInstance.simulated_annealing(1500, 0.005)
     problemInstance.visualise_matrix(sol.matrix)
     print(f'Solution value = {val}')
     # problemInstance.visualise()
