@@ -5,7 +5,7 @@ import numpy as np
 from copy import deepcopy
 from typing import Tuple, List
 from matplotlib import pyplot as plt
-from task2.blocks import _BlockInSpace
+from blocks import _BlockInSpace
 
 
 class _Solution:
@@ -80,6 +80,10 @@ class ImageApproximationInstance:
                     ] = candidate.value_inside
                     # print([str(bl) for bl in block_to_resize.space_of_blocks])
                     # self.visualise_matrix(solution.matrix)
+
+        # splitting if possible
+        block_to_split: _BlockInSpace = np.random.choice(solution.blocks)
+        block_to_split.split_in_two(np.random.choice(['x', 'y']), self.k, self.k)
         return solution
 
     @classmethod

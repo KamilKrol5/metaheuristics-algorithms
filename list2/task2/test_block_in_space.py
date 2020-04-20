@@ -1,6 +1,6 @@
 from copy import copy
 from unittest import TestCase
-from .blocks import _BlockInSpace
+from blocks import _BlockInSpace
 
 
 class TestBlockInSpace(TestCase):
@@ -116,3 +116,53 @@ class TestBlockInSpace(TestCase):
 
         self.assertNotIn(old_block, self.blocks)
         self.assertNotIn(old_left, self.blocks)
+
+    def test_can_split_in_two(self):
+        on_x, on_y = self.block.can_split_in_two(20, 20)
+        self.assertTrue(on_x)
+        self.assertTrue(on_y)
+
+        on_x, on_y = self.block.can_split_in_two(50, 100)
+        self.assertTrue(on_x)
+        self.assertTrue(on_y)
+
+        on_x, on_y = self.block.can_split_in_two(51, 101)
+        self.assertFalse(on_x)
+        self.assertFalse(on_y)
+
+    def test_split_in_two_negative(self):
+        with self.assertRaises(ValueError):
+            self.block.split_in_two('p')
+
+        self.assertFalse(self.block.split_in_two('x', 51, 10))
+        self.assertFalse(self.block.split_in_two('y', 50, 101))
+        self.assertFalse(self.block.split_in_two('x', 51, 101))
+        self.assertFalse(self.block.split_in_two('y', 51, 101))
+
+    def test_split_in_two_on_x(self):
+        blocks_count_before_split = len(self.block.space_of_blocks)
+        self.assertTrue(self.block.split_in_two('x', 20, 20))
+        self.assertEqual(len(self.block.space_of_blocks), blocks_count_before_split + 1)
+        self.assertEqual(self.block.is_space_valid(300, 450, 50, 200), 0)
+        self.assertEqual(self.block.x_length, 50)
+        self.assertEqual(self.block.space_of_blocks[-1].x_length, 50)
+        self.assertEqual(self.block.y_length, 200)
+        self.assertEqual(self.block.space_of_blocks[-1].y_length, 200)
+        self.assertEqual(self.block.x_start, 100)
+        self.assertEqual(self.block.y_start, 200)
+        self.assertEqual(self.block.space_of_blocks[-1].x_start, 150)
+        self.assertEqual(self.block.space_of_blocks[-1].y_start, 200)
+
+    def test_split_in_two_on_y(self):
+        blocks_count_before_split = len(self.block.space_of_blocks)
+        self.assertTrue(self.block.split_in_two('y', 20, 20))
+        self.assertEqual(len(self.block.space_of_blocks), blocks_count_before_split + 1)
+        self.assertEqual(self.block.is_space_valid(300, 450, 50, 200), 0)
+        self.assertEqual(self.block.y_length, 100)
+        self.assertEqual(self.block.space_of_blocks[-1].y_length, 100)
+        self.assertEqual(self.block.x_length, 100)
+        self.assertEqual(self.block.space_of_blocks[-1].x_length, 100)
+        self.assertEqual(self.block.y_start, 200)
+        self.assertEqual(self.block.x_start, 100)
+        self.assertEqual(self.block.space_of_blocks[-1].x_start, 100)
+        self.assertEqual(self.block.space_of_blocks[-1].y_start, 300)

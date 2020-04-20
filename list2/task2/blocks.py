@@ -1,4 +1,5 @@
 import sys
+from typing import MutableSequence
 
 import numpy as np
 
@@ -35,9 +36,9 @@ class _BlockInSpace(_Block):
 
     def __init__(self, x_start, y_start, x_length, y_length, value_inside, space_of_blocks):
         super().__init__(x_start, y_start, x_length, y_length, value_inside)
-        self.space_of_blocks = space_of_blocks
+        self.space_of_blocks: MutableSequence[_BlockInSpace] = space_of_blocks
 
-    def is_space_valid(self, x, y):
+    def is_space_valid(self, x, y, x_start=0, y_start=0):
         arr = np.full((x, y), 1, dtype=int)
         for block_ in self.space_of_blocks:
             end_x_index = block_.x_start + block_.x_length
@@ -48,7 +49,7 @@ class _BlockInSpace(_Block):
             ] = 0
 
         # print(f'Control sum = {np.sum(arr)}')
-        return np.sum(arr)
+        return np.sum(arr[x_start:, y_start:])
 
     def neighbours_in_direction(self, direction):
         neighbours = set()
@@ -121,8 +122,8 @@ class _BlockInSpace(_Block):
         # specific situations and error handling
         if up_or_down and left_or_right:
             raise ValueError('Merging in two directions at once is not supported')
-        print('BEFORE')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('BEFORE')
+        # print([str(bl) for bl in self.space_of_blocks])
         # merging itself
         if up_or_down:
             if direction[1] == -1:  # down
@@ -143,8 +144,8 @@ class _BlockInSpace(_Block):
             return False
 
         self.space_of_blocks.remove(other)
-        print('AFTER')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('AFTER')
+        # print([str(bl) for bl in self.space_of_blocks])
         return True
 
     """ Extends self-block and reduces the neighbour size by given value.
@@ -159,6 +160,7 @@ class _BlockInSpace(_Block):
         Returns:
             bool: True if extension was performed successfully, False otherwise.
     """
+
     def expand_towards_neighbour(self, neighbour: '_BlockInSpace', direction, difference):
         if direction not in self.DIRECTIONS.values():
             print(f'Warning: Extension in the direction not present in DIRECTIONS dictionary is not supported.',
@@ -181,4 +183,70 @@ class _BlockInSpace(_Block):
                 self.x_start -= difference
             elif direction[0] == 1:  # R
                 neighbour.x_start += difference
+        return True
+
+    """ Returns 2-tuple of bool values. First value tells if the block is x-splittable. 
+        Second: if the block is y-splittable.
+    """
+
+    def can_split_in_two(self, min_x_length, min_y_length):
+        return self.x_length >= 2 * min_x_length, self.y_length >= 2 * min_y_length
+
+    def _split_in_two_on_x(self):
+        print('BEFORE')
+        print([str(bl) for bl in self.space_of_blocks])
+        new_block_x_start = self.x_start + int(np.ceil(self.x_length / 2))
+        new_block_y_start = self.y_start
+        new_block_x_length = self.x_length // 2
+        new_block_y_length = self.y_length
+        self.x_length = int(np.ceil(self.x_length / 2))
+        self.space_of_blocks.append(_BlockInSpace(
+            new_block_x_start,
+            new_block_y_start,
+            new_block_x_length,
+            new_block_y_length,
+            self.value_inside,
+            self.space_of_blocks
+        ))
+        print('AFTER')
+        print([str(bl) for bl in self.space_of_blocks])
+
+    def _split_in_two_on_y(self):
+        print('BEFORE')
+        print([str(bl) for bl in self.space_of_blocks])
+        new_block_x_start = self.x_start
+        new_block_y_start = self.y_start + int(np.ceil(self.y_length / 2))
+        new_block_y_length = self.y_length // 2
+        new_block_x_length = self.x_length
+        self.y_length = int(np.ceil(self.y_length / 2))
+        self.space_of_blocks.append(_BlockInSpace(
+            new_block_x_start,
+            new_block_y_start,
+            new_block_x_length,
+            new_block_y_length,
+            self.value_inside,
+            self.space_of_blocks
+        ))
+        print('AFTER')
+        print([str(bl) for bl in self.space_of_blocks])
+
+    """ Splits the block in two. If axis is 'x' then the block is split towards x axis. Analogously for axis being 'y'.
+        Returns True if split was successful, False otherwise.
+    """
+
+    def split_in_two(self, axis: str, min_x_length=0, min_y_length=0):
+        can_split_on_x, can_split_on_y = self.can_split_in_two(min_x_length, min_y_length)
+        if axis == 'x':
+            if not can_split_on_x:
+                # print(f'Warning: Cannot split block {self} on x.', file=sys.stderr)
+                return False
+            self._split_in_two_on_x()
+        elif axis == 'y':
+            if not can_split_on_y:
+                # print(f'Warning: Cannot split block {self} on y.', file=sys.stderr)
+                return False
+            self._split_in_two_on_y()
+        else:
+            raise ValueError(f'Split can be performed only for axis "x" or "y". Invalid axis: {axis}')
+
         return True
