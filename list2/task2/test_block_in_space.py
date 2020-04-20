@@ -1,6 +1,6 @@
 from copy import copy
 from unittest import TestCase
-from .task2 import _BlockInSpace
+from .blocks import _BlockInSpace
 
 
 class TestBlockInSpace(TestCase):
