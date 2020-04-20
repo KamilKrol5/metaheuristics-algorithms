@@ -193,8 +193,8 @@ class _BlockInSpace(_Block):
         return self.x_length >= 2 * min_x_length, self.y_length >= 2 * min_y_length
 
     def _split_in_two_on_x(self):
-        print('BEFORE')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('BEFORE')
+        # print([str(bl) for bl in self.space_of_blocks])
         new_block_x_start = self.x_start + int(np.ceil(self.x_length / 2))
         new_block_y_start = self.y_start
         new_block_x_length = self.x_length // 2
@@ -208,12 +208,12 @@ class _BlockInSpace(_Block):
             self.value_inside,
             self.space_of_blocks
         ))
-        print('AFTER')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('AFTER')
+        # print([str(bl) for bl in self.space_of_blocks])
 
     def _split_in_two_on_y(self):
-        print('BEFORE')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('BEFORE')
+        # print([str(bl) for bl in self.space_of_blocks])
         new_block_x_start = self.x_start
         new_block_y_start = self.y_start + int(np.ceil(self.y_length / 2))
         new_block_y_length = self.y_length // 2
@@ -227,8 +227,8 @@ class _BlockInSpace(_Block):
             self.value_inside,
             self.space_of_blocks
         ))
-        print('AFTER')
-        print([str(bl) for bl in self.space_of_blocks])
+        # print('AFTER')
+        # print([str(bl) for bl in self.space_of_blocks])
 
     """ Splits the block in two. If axis is 'x' then the block is split towards x axis. Analogously for axis being 'y'.
         Returns True if split was successful, False otherwise.

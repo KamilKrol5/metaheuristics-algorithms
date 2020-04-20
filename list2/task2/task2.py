@@ -48,42 +48,65 @@ class ImageApproximationInstance:
     """
 
     def _get_random_neighbour(self, solution: _Solution) -> _Solution:
-        block: _BlockInSpace = np.random.choice(solution.blocks)
-        block.value_inside = np.random.choice(self.target_color_values)
-        end_row = block.x_start + block.x_length
-        end_column = block.y_start + block.y_length
-        solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
+        free_x_present, free_y_present = solution.x_free > 0, solution.y_free > 0
+        if free_x_present or free_y_present:
+            form_change_weight = 6
+        else:
+            form_change_weight = 0
 
-        # merging if possible
-        block: _BlockInSpace = np.random.choice(solution.blocks)
-        direction = random.choice(list(block.DIRECTIONS.values()))
-        block.merge_in_direction(direction)
+        choices = [
+            *(form_change_weight * ['resize']),
+            'color',
+            (form_change_weight // 3 * ['merge']),
+            (form_change_weight // 3 * ['split']),
+        ]
+        while True:
+            choice = np.random.choice(choices)
 
-        # extend if possible
-        block_to_resize: _BlockInSpace = np.random.choice(solution.blocks)
-        for direction in block_to_resize.DIRECTIONS.values():
-            can_extend, candidate = block_to_resize.can_expand_in_direction(direction, self.k, self.k)
-            if can_extend:
-                result = block_to_resize.expand_towards_neighbour(candidate, direction, 1)
-                if result:
-                    resized_end_x_index = block_to_resize.x_start + block_to_resize.x_length
-                    resized_end_y_index = block_to_resize.y_start + block_to_resize.y_length
-                    candidate_end_x_index = candidate.x_start + candidate.x_length
-                    candidate_end_y_index = candidate.y_start + candidate.y_length
-                    solution.matrix[
-                        block_to_resize.x_start:resized_end_x_index,
-                        block_to_resize.y_start:resized_end_y_index
-                    ] = block_to_resize.value_inside
-                    solution.matrix[
-                        candidate.x_start:candidate_end_x_index,
-                        candidate.y_start:candidate_end_y_index
-                    ] = candidate.value_inside
-                    # print([str(bl) for bl in block_to_resize.space_of_blocks])
-                    # self.visualise_matrix(solution.matrix)
+            if choice == 'color':
+                block: _BlockInSpace = np.random.choice(solution.blocks)
+                block.value_inside = np.random.choice(self.target_color_values)
+                end_row = block.x_start + block.x_length
+                end_column = block.y_start + block.y_length
+                solution.matrix[block.x_start:end_row, block.y_start:end_column] = block.value_inside
+                break
 
-        # splitting if possible
-        block_to_split: _BlockInSpace = np.random.choice(solution.blocks)
-        block_to_split.split_in_two(np.random.choice(['x', 'y']), self.k, self.k)
+            if choice == 'merge':
+                # merging if possible
+                block: _BlockInSpace = np.random.choice(solution.blocks)
+                direction = random.choice(list(block.DIRECTIONS.values()))
+                if block.merge_in_direction(direction):
+                    break
+
+            if choice == 'resize':
+                # extend if possible
+                block_to_resize: _BlockInSpace = np.random.choice(solution.blocks)
+                for direction in block_to_resize.DIRECTIONS.values():
+                    can_extend, candidate = block_to_resize.can_expand_in_direction(direction, self.k, self.k)
+                    if can_extend:
+                        result = block_to_resize.expand_towards_neighbour(candidate, direction, 1)
+                        if result:
+                            resized_end_x_index = block_to_resize.x_start + block_to_resize.x_length
+                            resized_end_y_index = block_to_resize.y_start + block_to_resize.y_length
+                            candidate_end_x_index = candidate.x_start + candidate.x_length
+                            candidate_end_y_index = candidate.y_start + candidate.y_length
+                            solution.matrix[
+                            block_to_resize.x_start:resized_end_x_index,
+                            block_to_resize.y_start:resized_end_y_index
+                            ] = block_to_resize.value_inside
+                            solution.matrix[
+                            candidate.x_start:candidate_end_x_index,
+                            candidate.y_start:candidate_end_y_index
+                            ] = candidate.value_inside
+                            # print([str(bl) for bl in block_to_resize.space_of_blocks])
+                            # self.visualise_matrix(solution.matrix)
+                            break
+
+            if choice == 'split':
+                # splitting if possible
+                block_to_split: _BlockInSpace = np.random.choice(solution.blocks)
+                if block_to_split.split_in_two(np.random.choice(['x', 'y']), self.k, self.k):
+                    break
         return solution
 
     @classmethod
@@ -145,7 +168,11 @@ class ImageApproximationInstance:
                     self._convert_value_to_closest_target_value(mean_value_in_submatrix)
                 blocks_.append(
                     _BlockInSpace(i, j, row_end_range - i, column_end_range - j, mean_value_in_submatrix, blocks_))
-        return _Solution(working_matrix, blocks_, self.rows % k, self.columns % k)
+        return _Solution(working_matrix, blocks_, self.columns % k, self.rows % k)
+        # color = self._convert_value_to_closest_target_value(np.mean(working_matrix))
+        # working_matrix[0:, 0:] = color
+        # blocks_.append(_BlockInSpace(0, 0, self.rows, self.columns, color, blocks_))
+        # return _Solution(working_matrix, blocks_, 0, 0)
 
     def simulated_annealing(self,
                             initial_temperature,
@@ -156,25 +183,29 @@ class ImageApproximationInstance:
 
         current_solution: _Solution = self._generate_initial_solution()
         working_solution: _Solution = deepcopy(current_solution)
+        best_ever_found = deepcopy(current_solution)
+        best_ever_found_cost = self._compute_mse_of_image_and_other(best_ever_found.matrix)
         self.visualise_matrix(current_solution.matrix)
 
         while temperature > red_factor and time.time() < end_time:
 
             neighbour: _Solution = self._get_random_neighbour(working_solution)
             # self.visualise_matrix(neighbour.matrix)
-            neighbour.validate()
+            # neighbour.validate()
 
-            delta_f = \
-                self._compute_mse_of_image_and_other(neighbour.matrix) - self._compute_mse_of_image_and_other(
-                    current_solution.matrix)
+            mse_of_neighbour = self._compute_mse_of_image_and_other(neighbour.matrix)
+            delta_f = mse_of_neighbour - self._compute_mse_of_image_and_other(current_solution.matrix)
             print('delta = ', delta_f, f'probability = {self._probability(delta_f, temperature, c)}')
 
             if self._probability(delta_f, temperature, c) > np.random.rand():
                 # self.visualise_matrix(neighbour.matrix)
                 current_solution = deepcopy(neighbour)
+                if mse_of_neighbour < best_ever_found_cost:
+                    best_ever_found_cost = mse_of_neighbour
+                    best_ever_found = deepcopy(neighbour)
             temperature = temperature * (1 - red_factor)
 
-        return current_solution, self._compute_mse_of_image_and_other(current_solution.matrix)
+        return best_ever_found, best_ever_found_cost
 
     @staticmethod
     def visualise_matrix(matrix: np.ndarray):
@@ -196,10 +227,6 @@ if __name__ == '__main__':
     # problemInstance.visualise_matrix(problemInstance.matrix)
     print('MSE for initial solution = ', problemInstance._compute_mse_of_image_and_other(init_.matrix))
 
-    sol, val = problemInstance.simulated_annealing(1500, 0.005)
+    sol, val = problemInstance.simulated_annealing(2000, 0.005)
     problemInstance.visualise_matrix(sol.matrix)
     print(f'Solution value = {val}')
-    # problemInstance.visualise()
-    # print(problemInstance.compute_mse(np.array([[1, 1, 1],
-    #                                       [2, 2, 2]]), np.array([[0, 0, 0],
-    #                                                              [3, 4, 5]])))
