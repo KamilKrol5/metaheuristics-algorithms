@@ -20,7 +20,7 @@ class Agent:
 
     def move(self, direction, change_own_board=True):
         destination: int = self.look(direction)
-        if destination == WALKABLE:
+        if destination == WALKABLE or (not change_own_board and destination == AGENT):
             self.__make_move(direction, change_own_board)
         elif destination == WALL:
             raise Agent.WallException()
