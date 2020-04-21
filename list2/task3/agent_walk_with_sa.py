@@ -25,14 +25,14 @@ class AgentWalkWithSA(AgentWalk):
             if is_valid:
                 return new_path
 
-    def validate_and_shorten_path(self, path: Path, agent=None,skrr=False):
+    def validate_and_shorten_path(self, path: Path, agent=None):
         if agent is None:
             walker = Agent(self.board)
         else:
             walker = agent
         for i, direction in enumerate(path, 1):
             try:
-                walker.move(direction, change_own_board=False,d=skrr)
+                walker.move(direction, change_own_board=False)
                 if self.board[walker.current_position.row, walker.current_position.column] == EXIT:
                     return Path(path[:i]), True
 
@@ -55,7 +55,7 @@ class AgentWalkWithSA(AgentWalk):
         while True:
             random_path = Path(np.random.choice(directions, size=self.rows * self.columns))
             walker.current_position = walker_start_pos
-            path_, is_valid = self.validate_and_shorten_path(random_path, agent=walker, skrr=True)
+            path_, is_valid = self.validate_and_shorten_path(random_path, agent=walker)
 
             if is_valid:
                 return path_
@@ -65,6 +65,8 @@ class AgentWalkWithSA(AgentWalk):
                             red_factor,
                             c=-1):
         end_time = time.time() + self.max_time
+
+        print(f"Generating initial solution. May take a while.", file=sys.stderr)
 
         temperature = initial_temperature
         current_solution: Path = self.generate_initial_solution()
