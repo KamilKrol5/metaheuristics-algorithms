@@ -1,4 +1,5 @@
 import fileinput
+import sys
 import time
 import random
 import numpy as np
@@ -18,7 +19,7 @@ class _Solution:
     def validate(self):
         x, y = self.matrix.shape
         sum_ = np.sum([bl.is_space_valid(x, y) for bl in self.blocks])
-        print(f'Control sum = {sum_}')
+        # print(f'Control sum = {sum_}')
         return sum_ == 0
 
 
@@ -91,12 +92,12 @@ class ImageApproximationInstance:
                             candidate_end_x_index = candidate.x_start + candidate.x_length
                             candidate_end_y_index = candidate.y_start + candidate.y_length
                             solution.matrix[
-                            block_to_resize.x_start:resized_end_x_index,
-                            block_to_resize.y_start:resized_end_y_index
+                                block_to_resize.x_start:resized_end_x_index,
+                                block_to_resize.y_start:resized_end_y_index
                             ] = block_to_resize.value_inside
                             solution.matrix[
-                            candidate.x_start:candidate_end_x_index,
-                            candidate.y_start:candidate_end_y_index
+                                candidate.x_start:candidate_end_x_index,
+                                candidate.y_start:candidate_end_y_index
                             ] = candidate.value_inside
                             # print([str(bl) for bl in block_to_resize.space_of_blocks])
                             # self.visualise_matrix(solution.matrix)
@@ -185,7 +186,7 @@ class ImageApproximationInstance:
         working_solution: _Solution = deepcopy(current_solution)
         best_ever_found = deepcopy(current_solution)
         best_ever_found_cost = self._compute_mse_of_image_and_other(best_ever_found.matrix)
-        self.visualise_matrix(current_solution.matrix)
+        # self.visualise_matrix(current_solution.matrix)
 
         while temperature > red_factor and time.time() < end_time:
 
@@ -195,7 +196,7 @@ class ImageApproximationInstance:
 
             mse_of_neighbour = self._compute_mse_of_image_and_other(neighbour.matrix)
             delta_f = mse_of_neighbour - self._compute_mse_of_image_and_other(current_solution.matrix)
-            print('delta = ', delta_f, f'probability = {self._probability(delta_f, temperature, c)}')
+            # print('delta = ', delta_f, f'probability = {self._probability(delta_f, temperature, c)}')
 
             if self._probability(delta_f, temperature, c) > np.random.rand():
                 # self.visualise_matrix(neighbour.matrix)
@@ -219,14 +220,9 @@ class ImageApproximationInstance:
 
 if __name__ == '__main__':
     problemInstance = ImageApproximationInstance.from_file_input([0, 32, 64, 128, 160, 192, 223, 255])
-    init_ = problemInstance._generate_initial_solution()
-    print(init_.matrix.shape)
-    print(init_.blocks)
-    # problemInstance.visualise_matrix(init_.matrix)
-    # problemInstance.visualise_matrix(problemInstance._get_random_neighbour(init_).matrix)
-    # problemInstance.visualise_matrix(problemInstance.matrix)
-    print('MSE for initial solution = ', problemInstance._compute_mse_of_image_and_other(init_.matrix))
 
     sol, val = problemInstance.simulated_annealing(2000, 0.005)
-    problemInstance.visualise_matrix(sol.matrix)
-    print(f'Solution value = {val}')
+    # problemInstance.visualise_matrix(sol.matrix)
+    print(val)
+    print('\n'.join([' '.join([str(num) for num in row]) for row in sol.matrix]), file=sys.stderr)
+    # print(f'Solution value = {val}')
