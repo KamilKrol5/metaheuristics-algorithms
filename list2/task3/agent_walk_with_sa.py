@@ -11,8 +11,6 @@ class AgentWalkWithSA(AgentWalk):
         super().__init__(board, max_time)
         self.rows, self.columns = board.shape
 
-    # """ Generates random neighbour of provided path. Given path object is modified inside this method.
-    # """
     def get_random_neighbour_by_inversions(self, path: Path, random_inversion_count=1) -> Path:
         walker = Agent(self.board)
         walker_start_pos: Position = walker.current_position
@@ -33,7 +31,6 @@ class AgentWalkWithSA(AgentWalk):
             path_copy = copy(path)
             suffix_end = np.random.randint(0, len(path_copy)-1)
             path_copy[suffix_end:] = np.random.choice(directions, len(path_copy) - suffix_end)
-            assert len(path_copy) == len(path)
             new_path, is_valid = self.validate_and_shorten_path(path_copy, agent=walker)
             if is_valid:
                 return new_path
