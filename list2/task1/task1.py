@@ -24,7 +24,9 @@ def salomon_neighbourhood_generator(x: np.ndarray):
 
 
 def salomon_random_neighbour(x: np.ndarray):
-    return x + x * (np.random.random(4) * 2 - 1)
+    change: np.ndarray = x * (np.random.random(4) * 2 - 1)
+    change = np.where(np.isclose(change, 0.0, atol=1.0e-100), np.random.choice([0, np.random.random()]), change)
+    return x + change
 
 
 def get_input():
