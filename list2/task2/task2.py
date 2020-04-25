@@ -221,7 +221,7 @@ class ImageApproximationInstance:
 if __name__ == '__main__':
     problemInstance = ImageApproximationInstance.from_file_input([0, 32, 64, 128, 160, 192, 223, 255])
 
-    sol, val = problemInstance.simulated_annealing(2000, 0.005)
+    sol, val = problemInstance.simulated_annealing(20000, 0.0005)
     # problemInstance.visualise_matrix(sol.matrix)
     print(val)
     print('\n'.join([' '.join([str(num) for num in row]) for row in sol.matrix]), file=sys.stderr)
