@@ -62,22 +62,24 @@ class Agent:
 
 
 class AgentWalk:
-    def __init__(self, board: np.ndarray, max_time: int):
+    def __init__(self, board: np.ndarray, initial_solutions: List[Path], max_time: int, max_population_size: int):
+        self.max_population_size = max_population_size
+        self.initial_solutions = initial_solutions
         self.max_time = max_time
         self.board = board
 
     @classmethod
     def from_file(cls, filename: str):
-        board_, max_time, initial_solutions_count, max_population_size = AgentWalk.read_input(filename)
-        return cls(board_, max_time)
+        board_, init_sol, max_time,  max_population_size = AgentWalk.read_input(filename)
+        return cls(board_, init_sol, max_time, max_population_size)
 
     @classmethod
     def from_stdin(cls):
-        cities, max_time, initial_solutions_count, max_population_size = AgentWalk.read_input()
-        return cls(cities, max_time)
+        cities, init_sol, max_time, max_population_size = AgentWalk.read_input()
+        return cls(cities, init_sol, max_time, max_population_size)
 
     @staticmethod
-    def read_input(filename=None) -> Tuple[np.ndarray, int, int, int]:
+    def read_input(filename=None) -> Tuple[np.ndarray, List[Path], int, int]:
         with open(filename, 'r') if filename is not None else fileinput.input() as file:
             first_line = file.readline()
             # print([str(x) for x in first_line.split()])
@@ -94,7 +96,7 @@ class AgentWalk:
                     print(initial_solutions)
                 else:
                     print(f'Too much lines in input: {str.rstrip(line)}', file=sys.stderr)
-        return board, max_time, initial_solutions_count, max_population_size
+        return board, initial_solutions, max_time, max_population_size
 
     def print_board_matrix(self):
         return '\n'.join([f'{row}' for row in self.board])
