@@ -67,6 +67,7 @@ class AgentWalk:
         self.initial_solutions = initial_solutions
         self.max_time = max_time
         self.board = board
+        self.population: List[Path] = []
 
     @classmethod
     def from_file(cls, filename: str):
