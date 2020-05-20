@@ -1,4 +1,9 @@
-def grouped_by_2(it):
+from typing import Generator, Tuple, TypeVar, Iterable
+
+T = TypeVar('T')
+
+
+def grouped_by_2(it: Iterable[T]) -> Generator[Tuple[T, T], None, None]:
     it = iter(it)
     while True:
         try:
