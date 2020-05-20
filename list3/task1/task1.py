@@ -159,7 +159,7 @@ class Optimization:
 
     @property
     def solution(self) -> SolutionRepresentation:
-        return sorted(self.population, key=lambda i: self.fitness_function(i), reverse=True)[0]
+        return sorted(self.population, key=lambda i: self.fitness_function(i))[0]
 
     @staticmethod
     def cross_operator(parent1: SolutionRepresentation,
@@ -240,7 +240,7 @@ if __name__ == '__main__':
     print(initial_solution)
     dim = initial_solution.shape[0]
     solutions_range = [(-5, 5) for _ in range(dim)]
-    req_precision = 0.001
+    req_precision = 0.00001
 
     config = Configuration(dim,
                            solutions_range,
