@@ -51,6 +51,9 @@ class AgentWalkWithGenetic(AgentWalk):
                 walker.move(direction, change_own_board=False)
                 if self.board[walker.current_position.row, walker.current_position.column] == EXIT:
                     return Path(path[:i]), True
+                for direction_ in directions:
+                    if walker.look(direction_) == EXIT:
+                        return Path(path[:i] + [direction_]), True
 
             except Agent.WallException:
                 return None, False
@@ -131,23 +134,22 @@ class AgentWalkWithGenetic(AgentWalk):
         walker_start_pos: Position = walker.current_position
 
         for _ in range(attempts_count):
-            possible_child = self._cross(parent1, parent2)
-            # print('b',possible_child)
-            self._mutate(possible_child)
-            # print(' ', possible_child)
-            walker.current_position = walker_start_pos
-            path_, is_valid = self._validate_and_shorten_path(possible_child, agent=walker)
+            possible_children = self._cross(parent1, parent2)
+            for possible_child in possible_children:
+                self._mutate(possible_child)
+                walker.current_position = walker_start_pos
+                path_, is_valid = self._validate_and_shorten_path(possible_child, agent=walker)
+                if is_valid:
+                    print(f'NEW CHILD: {path_}; parents: {parent1}, {parent2};', file=sys.stderr)
+                    return path_
 
-            if is_valid:
-                print(f'NEW CHILD: {path_}; parents: {parent1}, {parent2};', file=sys.stderr)
-                return path_
         else:
             raise CannotMakeValidChild(f'Failed to make child. Number of attempts: {attempts_count}')
 
     @staticmethod
-    def _cross(parent1, parent2) -> Path:
+    def _cross(parent1, parent2) -> Tuple[Path, Path]:
         index = np.random.randint(1, min(len(parent1), len(parent2)))
-        return parent1[:index] + parent2[index:]
+        return parent1[:index] + parent2[index:], parent2[:index] + parent1[index:]
 
     def _evolve(self) -> None:
         to_reproduce = self._selection()
@@ -159,10 +161,14 @@ class AgentWalkWithGenetic(AgentWalk):
         if not 0 <= mutation_probability <= 1:
             raise ValueError(f'Mutation probability must be a number between 0 and 1 (inclusive)')
 
+        initial_population = self.population.copy()
         self.mutation_probability = mutation_probability
         end_time = time.time() + self.max_time
         while time.time() < end_time:
             self._evolve()
             # print("\n".join(map(str, self.population)))
             # print('---')
+
+        print(f'Initial population: {initial_population}')
+        print(f'Initial population costs: {[ i.cost for i in initial_population]}')
         return self.solution
