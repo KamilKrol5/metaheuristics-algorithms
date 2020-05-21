@@ -15,3 +15,12 @@ def grouped_by_2(it: Iterable[T]) -> Generator[Tuple[T, T], None, None]:
 
 def negate_bit(value: int, bit_index) -> int:
     return value ^ (1 << bit_index)
+
+
+def flatten(collection):
+    for element in collection:
+        if isinstance(element, list):
+            for x in flatten(element):
+                yield x
+        else:
+            yield element
