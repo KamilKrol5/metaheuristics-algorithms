@@ -11,4 +11,6 @@ Tasks for "metaheuristics algorithms" course at the Faculty of Fundamental Probl
 * image approximation using SA
 * Agent Walk through the maze using SA
 ##### List 3.  #####
-* tba.  
+* Introduction to genetic algorithms
+* Scrabble-like highest value word finder using GA
+* Agent Walk through the maze using GA
