@@ -1,8 +1,6 @@
 from collections import Counter
 from dataclasses import dataclass
-from typing import Iterable, Container, Dict, Optional
-
-from dictionary_utils import read_dictionary
+from typing import Iterable, Container, Dict, Optional, Union
 
 
 @dataclass
@@ -31,31 +29,29 @@ class WordUtils:
     dictionary: Container[str]
     allowed_letters: Dict[str, Letter]
 
-    def _are_all_letters_allowed(self, word: Word) -> bool:
+    def _are_all_letters_allowed(self, word: Union[str, Word]) -> bool:
         letters_in_word = Counter(word)
         for letter, count in letters_in_word.items():
             if letter in self.allowed_letters:
-                if count > self.allowed_letters[letter]:
+                if count > self.allowed_letters[letter].count:
                     return False
             else:
                 return False
         return True
 
-    def is_word_valid(self, word: Word) -> bool:
+    def _is_word_valid(self, word: Union[str, Word]) -> bool:
         return self._are_all_letters_allowed(word) and word in self.dictionary
 
-    def points(self, word: Word) -> int:
+    def points(self, word: Union[str, Word]) -> int:
         return sum([self.allowed_letters[letter].points for letter in word])
 
-    def longest_valid_prefix(self, word: Word) -> Optional[Word]:
+    def longest_valid_prefix(self, word: Union[str, Word]) -> Optional[Word]:
+        if self._is_word_valid(word):
+            return word
         length = len(word)
         for i in range(1, length):
             prefix: Word = Word(word[:-i])
-            if self.is_word_valid(prefix) and prefix in self.dictionary:
+            if self._is_word_valid(prefix) and prefix in self.dictionary:
                 return prefix
         else:
             return None
-
-
-if __name__ == '__main__':
-    print(len(read_dictionary()))
