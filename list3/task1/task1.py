@@ -22,8 +22,8 @@ def get_input():
             initial_solution_ = data[3:8]
             random_variables_ = data[8:]
     return int(max_time_), \
-           np.array([int(x) for x in initial_solution_]), \
-           np.array([float(eps) for eps in random_variables_])
+        np.array([int(x) for x in initial_solution_]), \
+        np.array([float(eps) for eps in random_variables_])
 
 
 @dataclass
@@ -52,13 +52,8 @@ class SolutionRepresentation:
         self.precision = precision
         self.x_ranges = x_ranges
         self._x_ranges_lengths = [abs(upper - lower) for lower, upper in x_ranges]
-        # print(self._x_ranges_lengths)
         self.chromosome_lengths = [int(np.ceil(np.log2(ranges_length / precision))) for ranges_length in
                                    self._x_ranges_lengths]
-        # print(self.chromosome_lengths)
-        # print(self._value)
-        # self.chromosomes = self.map_to_binary_sequence()
-        # self.compute_value()
 
     @classmethod
     def from_value(cls,
@@ -81,12 +76,6 @@ class SolutionRepresentation:
         solution.chromosomes = chromosomes
         solution.value = solution.compute_value()
         return solution
-
-    # @property
-    # def value(self):
-    #     # if self._value is not None:
-    #     #     return self._value
-    #     return self.compute_value()
 
     def compute_value(self):
         # print('compute value')
@@ -222,8 +211,6 @@ class Optimization:
         end_time = time.time() + self.conf.max_time
         while time.time() < end_time:
             self._evolve()
-            print("\n".join(map(str, self.population)))
-            print('---')
         return self.solution
 
     def _evolve(self):
@@ -235,9 +222,7 @@ class Optimization:
 
 
 if __name__ == '__main__':
-    print(XSYangFitnessFunction.x_s_yang([0, 0, 0], [0.3, 0.5, 0.7]))
     max_time, initial_solution, epsilons = get_input()
-    print(initial_solution)
     dim = initial_solution.shape[0]
     solutions_range = [(-5, 5) for _ in range(dim)]
     req_precision = 0.00001
@@ -256,4 +241,5 @@ if __name__ == '__main__':
     ]
     initial_population_[0] = SolutionRepresentation.from_value(solutions_range, req_precision, initial_solution)
     optimization = Optimization.with_initial_population(config, fitness_fun, initial_population_)
-    print(optimization.optimize())
+    res = optimization.optimize()
+    print(' '.join(str(s) for s in res.value), fitness_fun(res))
