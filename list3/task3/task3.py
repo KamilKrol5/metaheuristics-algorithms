@@ -8,5 +8,5 @@ if __name__ == '__main__':
     res = agent_walk.run_genetic_algorithm(
         mutation_probability=0.4
     )
-    print(''.join(res), res.cost, file=sys.stderr)
+    print(''.join(res), file=sys.stderr)
     print(res.cost)

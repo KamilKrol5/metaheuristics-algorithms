@@ -74,7 +74,7 @@ class AgentWalkWithGenetic(AgentWalk):
                 if np.random.rand() < self._chance_for_reproduction(individual):
                     selected.append(individual)
 
-        print(f'Selected for reproduction: {len(selected)} of {len(self.population)}', file=sys.stderr)
+        # print(f'Selected for reproduction: {len(selected)} of {len(self.population)}', file=sys.stderr)
         return selected
 
     def _reproduce(self, to_reproduce: List[Path]) -> int:
@@ -88,7 +88,7 @@ class AgentWalkWithGenetic(AgentWalk):
             to_reproduce = to_reproduce[:-1]
 
         for mother, father in grouped_by_2(to_reproduce):
-            print(f'Mother: {mother}; Father: {father}', file=sys.stderr)
+            # print(f'Mother: {mother}; Father: {father}', file=sys.stderr)
             try:
                 # mc, fc = mother.copy(), father.copy()
                 child = self._try_for_child(mother, father, self.child_making_attempts_count)
@@ -102,19 +102,19 @@ class AgentWalkWithGenetic(AgentWalk):
             except CannotMakeValidChild:
                 failed += 1
 
-        print(f'Removing: {to_remove} from {self.population}', file=sys.stderr)
+        # print(f'Removing: {to_remove} from {self.population}', file=sys.stderr)
         for dead in to_remove:
             self.population.remove(dead)
-        print(f'Adding: {children} to {self.population}', file=sys.stderr)
+        # print(f'Adding: {children} to {self.population}', file=sys.stderr)
         self.population.extend(children)
-        print(self.population, file=sys.stderr)
-        print(f'Failed child making attempts: {failed} out of {len(to_reproduce)}', file=sys.stderr)
-        print('---', file=sys.stderr)
+        # print(self.population, file=sys.stderr)
+        # print(f'Failed child making attempts: {failed} out of {len(to_reproduce)}', file=sys.stderr)
+        # print('---', file=sys.stderr)
         return failed
 
     def _mutate(self, individual: Path) -> bool:
         if np.random.rand() < self.mutation_probability:
-            before = individual.copy()
+            # before = individual.copy()
             # if np.random.rand() < 0.5:
             #     i = np.random.randint(0, len(individual) // 2+1)
             #     j = np.random.randint(len(individual) // 2+1, len(individual))
@@ -125,7 +125,7 @@ class AgentWalkWithGenetic(AgentWalk):
             mutated_direction = directions[mutated_direction_index]
             individual[rand_index] = mutated_direction
 
-            print(f'MUTATION successful: {before} -> {individual}', file=sys.stderr)
+            # print(f'MUTATION successful: {before} -> {individual}', file=sys.stderr)
             return True
         return False
 
@@ -140,7 +140,7 @@ class AgentWalkWithGenetic(AgentWalk):
                 walker.current_position = walker_start_pos
                 path_, is_valid = self._validate_and_shorten_path(possible_child, agent=walker)
                 if is_valid:
-                    print(f'NEW CHILD: {path_}; parents: {parent1}, {parent2};', file=sys.stderr)
+                    # print(f'NEW CHILD: {path_}; parents: {parent1}, {parent2};', file=sys.stderr)
                     return path_
 
         else:
@@ -166,9 +166,7 @@ class AgentWalkWithGenetic(AgentWalk):
         end_time = time.time() + self.max_time
         while time.time() < end_time:
             self._evolve()
-            # print("\n".join(map(str, self.population)))
-            # print('---')
 
-        print(f'Initial population: {initial_population}')
-        print(f'Initial population costs: {[ i.cost for i in initial_population]}')
+        print(f'Initial population: {initial_population}', file=sys.stderr)
+        print(f'Initial population costs: {[ i.cost for i in initial_population]}', file=sys.stderr)
         return self.solution

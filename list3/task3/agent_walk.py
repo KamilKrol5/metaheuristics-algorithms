@@ -2,6 +2,7 @@ import fileinput
 import sys
 from collections import namedtuple
 from typing import Tuple, List
+
 import numpy as np
 
 from path import Path
@@ -71,7 +72,7 @@ class AgentWalk:
 
     @classmethod
     def from_file(cls, filename: str):
-        board_, init_sol, max_time,  max_population_size = AgentWalk.read_input(filename)
+        board_, init_sol, max_time, max_population_size = AgentWalk.read_input(filename)
         return cls(board_, init_sol, max_time, max_population_size)
 
     @classmethod
@@ -84,7 +85,7 @@ class AgentWalk:
         with open(filename, 'r') if filename is not None else fileinput.input() as file:
             first_line = file.readline()
             # print([str(x) for x in first_line.split()])
-            [max_time, rows, columns, initial_solutions_count, max_population_size] = \
+            [max_time, rows, columns, _, max_population_size] = \
                 [int(x) for x in first_line.split()]
             board = np.ndarray((rows, columns))
             initial_solutions: List[Path] = []
@@ -94,7 +95,6 @@ class AgentWalk:
                         board[i][j] = int(x)
                 elif i - rows + 1 < max_population_size:
                     initial_solutions.append(Path(str.rstrip(line)))
-                    print(initial_solutions)
                 else:
                     print(f'Too much lines in input: {str.rstrip(line)}', file=sys.stderr)
         return board, initial_solutions, max_time, max_population_size
